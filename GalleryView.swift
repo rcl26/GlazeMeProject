@@ -6,7 +6,7 @@ struct GalleryView: View {
     var body: some View {
         VStack {
             // Headline
-            Text("Glaze Gallery")
+            Text("Gallery")
                 .font(.system(size: 24, weight: .bold, design: .serif))
                 .foregroundColor(.white)
                 .padding(.top, 40)
@@ -28,7 +28,7 @@ struct GalleryView: View {
                                 Button(action: {
                                     // Action for reminiscing can be added here
                                 }) {
-                                    Text("Reminisce")
+                                    Text("View Glazing")
                                         .font(.system(size: 16, weight: .bold))
                                         .frame(width: 150, height: 40)
                                         .background(Color.yellow)

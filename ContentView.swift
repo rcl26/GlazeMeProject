@@ -24,13 +24,13 @@ struct ContentView: View {
                     ZStack {
                         Circle()
                             .fill(Color.white.opacity(0.2))
-                            .frame(width: 200, height: 200)
+                            .frame(width: 300, height: 300)
                         
                         if let selectedImage = selectedImage {
                             Image(uiImage: selectedImage)
                                 .resizable()
                                 .scaledToFill()
-                                .frame(width: 200, height: 200)
+                                .frame(width: 300, height: 300)
                                 .clipShape(Circle())
                             
                             // Edit Icon Overlay
@@ -44,7 +44,7 @@ struct ContentView: View {
                                     .background(Color.black.opacity(0.7))
                                     .clipShape(Circle())
                             }
-                            .offset(x: 70, y: -70)
+                            .offset(x: 90, y: -90)
                         } else {
                             Image(systemName: "plus")
                                 .resizable()
@@ -65,7 +65,7 @@ struct ContentView: View {
                     .foregroundColor(.white)
                     .frame(width: 350, height: 120)
                     .multilineTextAlignment(.leading)
-                
+                    .offset(x: 0, y: -20)
                 Spacer()
                 // Glaze Me Button
                 Button(action: {
@@ -81,7 +81,7 @@ struct ContentView: View {
                     if isLoading {
                         ProgressView()
                             .progressViewStyle(CircularProgressViewStyle(tint: .yellow))
-                            .scaleEffect(1.5)
+                            .scaleEffect(2.0)
                     } else {
                         Text("Glaze me")
                             .font(.system(size: 20, weight: .bold, design: .default))
@@ -92,6 +92,7 @@ struct ContentView: View {
                     }
                 }
                 .disabled(isLoading)
+                .offset(x: 0, y: -60)
                 
                 Spacer()
             }
