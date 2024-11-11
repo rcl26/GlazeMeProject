@@ -13,9 +13,10 @@ struct ContentView: View {
                 Spacer().frame(height: 30)
                 // Title Text
                 Text("Upload a picture")
-                    .font(.system(size: 24, weight: .regular, design: .serif))
+                    .font(.custom("Lemonada-Medium", size: 28))
                     .foregroundColor(.white)
                     .padding(.top, 50)
+                    .offset(y: 30)
                 
                 // Circular Image Upload Area
                 Button(action: {
@@ -65,7 +66,7 @@ struct ContentView: View {
                     .foregroundColor(.white)
                     .frame(width: 350, height: 120)
                     .multilineTextAlignment(.leading)
-                    .offset(x: 0, y: -20)
+                    .offset(x: 0, y: -50)
                 Spacer()
                 // Glaze Me Button
                 Button(action: {
@@ -84,15 +85,15 @@ struct ContentView: View {
                             .scaleEffect(2.0)
                     } else {
                         Text("Glaze me")
-                            .font(.system(size: 20, weight: .bold, design: .default))
-                            .frame(width: 200, height: 50)
+                            .font(.custom("Lemonada-Bold", size: 24))
+                            .frame(width: 200, height: 75)
                             .background(Color.yellow)
                             .foregroundColor(.white)
-                            .cornerRadius(25)
+                            .cornerRadius(100)
                     }
                 }
                 .disabled(isLoading)
-                .offset(x: 0, y: -60)
+                .offset(x: 0, y: -90)
                 
                 Spacer()
             }
