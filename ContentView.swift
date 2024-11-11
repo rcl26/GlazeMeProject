@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  GlazeMeProject
-//
-//  Created by Ryan LaTorre on 11/11/24.
-//
-
 import SwiftUI
 
 struct ContentView: View {
@@ -13,7 +6,7 @@ struct ContentView: View {
             Image(systemName: "globe")
                 .imageScale(.large)
                 .foregroundStyle(.tint)
-            Text("Hello, world!")
+            Text("Hello, Glaze!")
         }
         .padding()
     }
