@@ -2,6 +2,8 @@ import SwiftUI
 
 struct GalleryView: View {
     @Binding var uploadedImages: [UIImage]
+    @State private var selectedResponse: String? = nil
+
     
     var body: some View {
         VStack {
