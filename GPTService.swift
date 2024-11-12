@@ -6,7 +6,7 @@ struct GPTService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        request.addValue("Bearer \(Config.openAIGPTAPIKey)", forHTTPHeaderField: "Authorization")
+        request.addValue("Bearer \(Config.openAIAPIKey)", forHTTPHeaderField: "Authorization")
 
         let requestBody: [String: Any] = [
             "model": "gpt-4",  // or you can use "gpt-3.5-turbo" if that’s what you have access to
