@@ -104,7 +104,9 @@ struct ContentView: View {
                             VisionService.analyzeImage(with: imageData, apiKey: Config.googleVisionAPIKey) { description in
                                 if let description = description {
                                     // Step 2: Use Vision's description to prompt GPT-4 API using GPTService
-                                    GPTService.getGPTResponse(prompt: description) { response in
+                                    let prompt = commentText.isEmpty ? description : "\(commentText). \(description)"
+                                    GPTService.getGPTResponse(prompt: prompt) { response in
+
                                         DispatchQueue.main.async {
                                             isLoading = false
                                             if let response = response {
