@@ -1,7 +1,10 @@
 import Foundation
 
 struct GPTService {
-    static func getGPTResponse(prompt: String, completion: @escaping (String?) -> Void) {
+    static func getGPTResponse(subject: String, context: String, completion: @escaping (String?) -> Void) {
+        // Construct the prompt from subject and context
+        let prompt = "The image depicts a \(subject) in a setting with the following context: \(context). Can you provide a creative compliment or description for the subject based on these details?"
+
         let url = URL(string: "https://api.openai.com/v1/chat/completions")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
