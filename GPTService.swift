@@ -1,9 +1,15 @@
 import Foundation
 
 struct GPTService {
-    static func getGPTResponse(subject: String, context: String, completion: @escaping (String?) -> Void) {
-        // Construct the prompt from subject and context
-        let prompt = "The image depicts a \(subject) in a setting with the following context: \(context). Can you provide a creative compliment or description for the subject based on these details?"
+    static func getGPTResponse(subject: String, context: [String: Any], completion: @escaping (String?) -> Void) {
+        // Convert context (structured data) to JSON string
+        let jsonData = try? JSONSerialization.data(withJSONObject: context, options: [])
+        let jsonString = String(data: jsonData ?? Data(), encoding: .utf8) ?? ""
+
+        // Construct the prompt using the subject and the structured context
+        let prompt = """
+        The image depicts a \(subject) with the following details: \(jsonString). Provide two sentences of an energetic and relatable compliment for the subject based on these details. Your tone should sound like you are talking to an idol who you admire greatly. 
+        """
 
         let url = URL(string: "https://api.openai.com/v1/chat/completions")!
         var request = URLRequest(url: url)
@@ -12,7 +18,7 @@ struct GPTService {
         request.addValue("Bearer \(Config.openAIAPIKey)", forHTTPHeaderField: "Authorization")
 
         let requestBody: [String: Any] = [
-            "model": "gpt-4",  // or you can use "gpt-3.5-turbo" if that’s what you have access to
+            "model": "gpt-4",
             "messages": [
                 ["role": "user", "content": prompt]
             ],
@@ -28,37 +34,21 @@ struct GPTService {
                 return
             }
 
-            guard let httpResponse = response as? HTTPURLResponse else {
-                print("GPT API Error: No valid HTTP response")
-                completion(nil)
-                return
-            }
-
-            if httpResponse.statusCode != 200 {
-                print("GPT API Error: HTTP status code \(httpResponse.statusCode)")
-                completion(nil)
-                return
-            }
-
-            guard let data = data else {
-                print("GPT API Error: No data returned")
+            guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200, let data = data else {
+                print("GPT API Error: No valid HTTP response or data.")
                 completion(nil)
                 return
             }
 
             let responseData = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any]
-            print("GPT API Response: \(String(describing: responseData))")
-
             if let choices = responseData?["choices"] as? [[String: Any]],
                let message = choices.first?["message"] as? [String: Any],
                let content = message["content"] as? String {
                 completion(content.trimmingCharacters(in: .whitespacesAndNewlines))
             } else {
                 print("Failed to parse GPT response")
-                print("Full response data: \(String(describing: responseData))")
                 completion(nil)
             }
-
         }.resume()
     }
 }
