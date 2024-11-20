@@ -2,9 +2,11 @@ import SwiftUI
 
 struct GalleryView: View {
     @Binding var uploadedItems: [UploadedItem]
+    @State private var showProfileView: Bool = false // Controls profile sheet
+    @State private var navigationPath = NavigationPath() // Resets navigation stack
 
     var body: some View {
-        NavigationView {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 // Main Background
                 LinearGradient(
@@ -16,22 +18,20 @@ struct GalleryView: View {
 
                 // Main Gallery Content
                 VStack {
-                    // Title
                     Text("Gallery")
                         .font(.custom("Lemonada-Medium", size: 28))
                         .foregroundColor(.white)
                         .padding(.top, 20)
 
-                    // Display Items or Placeholder
                     if !uploadedItems.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(alignment: .top, spacing: 40) { // Align items to their tops
+                            HStack(alignment: .top, spacing: 40) { // Ensure alignment at the top
                                 ForEach(uploadedItems, id: \.image) { item in
-                                    VStack(spacing: 10) { // Ensure consistent spacing between elements
+                                    VStack(spacing: 10) {
                                         Image(uiImage: item.image)
                                             .resizable()
                                             .scaledToFill()
-                                            .frame(width: 150, height: 150) // Ensure consistent size
+                                            .frame(width: 150, height: 150)
                                             .clipShape(Circle())
                                             .overlay(
                                                 Circle()
@@ -41,22 +41,44 @@ struct GalleryView: View {
                                             .font(.caption)
                                             .foregroundColor(.white)
                                             .multilineTextAlignment(.center)
-                                            .frame(width: 150) // Match width of the image
+                                            .frame(width: 150)
                                     }
                                 }
                             }
                             .padding()
                         }
-
                     } else {
-                        Text("No items uploaded yet.")
+                        Text("No images uploaded yet.")
                             .font(.custom("Lemonada-Regular", size: 20))
                             .foregroundColor(.white)
                             .padding()
                     }
                 }
+
+                // Profile Icon
+                HStack {
+                    Spacer()
+                    Button(action: {
+                        showProfileView = true // Open profile as a sheet
+                    }) {
+                        Image(systemName: "person.circle")
+                            .resizable()
+                            .frame(width: 30, height: 30)
+                            .foregroundColor(Color.white.opacity(0.8))
+                    }
+                    .padding(.trailing, 30)
+                    .padding(.top, 30)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
             }
-            .navigationBarHidden(true) // Hide default navigation bar
+            .onAppear {
+                // Reset navigation when entering the Gallery
+                navigationPath = NavigationPath()
+            }
+        }
+        // Sheet for Profile View
+        .sheet(isPresented: $showProfileView) {
+            ProfileView() // Profile View is now independent
         }
     }
 }
