@@ -1,12 +1,17 @@
 import SwiftUI
 import Foundation
 
+struct UploadedItem {
+    var image: UIImage
+    var response: String
+}
+
 struct ContentView: View {
     @State private var commentText: String = ""
     @State private var selectedImage: UIImage? = nil
     @State private var isImagePickerPresented: Bool = false
     @State private var isLoading: Bool = false
-    @State private var uploadedImages: [UIImage] = []
+    @State private var uploadedItems: [UploadedItem] = []
     @State private var gptResponse: String = ""
     @State private var isModalPresented: Bool = false
     
@@ -80,7 +85,8 @@ struct ContentView: View {
                                             isLoading = false
                                             if let response = response {
                                                 self.gptResponse = response
-                                                uploadedImages.append(selectedImage)
+                                                uploadedItems.append(UploadedItem(image: selectedImage, response: response))
+
                                                 isModalPresented = true  // Show the modal when response is ready
                                             } else {
                                                 self.gptResponse = "Failed to generate response."
@@ -184,11 +190,11 @@ struct ContentView: View {
                 Label("Upload", systemImage: "camera.fill")
             }
             
-            GalleryView(uploadedImages: $uploadedImages)
+            GalleryView(uploadedItems: $uploadedItems)
+
                 .tabItem {
                     Label("Gallery", systemImage: "photo.fill.on.rectangle.fill")
                 }
         }
     }
 }
-
