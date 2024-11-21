@@ -26,7 +26,8 @@ struct GalleryView: View {
                     if !uploadedItems.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(alignment: .top, spacing: 40) { // Ensure alignment at the top
-                                ForEach(uploadedItems, id: \.image) { item in
+                                // Reverse the order of uploadedItems
+                                ForEach(uploadedItems.reversed(), id: \.image) { item in
                                     VStack(spacing: 10) {
                                         Image(uiImage: item.image)
                                             .resizable()

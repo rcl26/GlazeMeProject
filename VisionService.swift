@@ -18,8 +18,16 @@ struct VisionService {
             }
             
             if let structuredData = parseResponse(data: data) {
-                // Pass structured data to the completion handler
-                completion(structuredData)
+                // Check for human-related labels or objects
+                if let labels = structuredData["labels"] as? [String],
+                   let objects = structuredData["objects"] as? [String],
+                   !containsHuman(labels: labels, objects: objects) {
+                    print("No human detected in the image.")
+                    completion(["noHuman": true])
+                } else {
+                    // Pass structured data to the completion handler
+                    completion(structuredData)
+                }
             } else {
                 print("Failed to parse response data.")
                 completion(nil)
@@ -41,13 +49,12 @@ struct VisionService {
                 [
                     "image": ["content": base64Image],
                     "features": [
-                        ["type": "FACE_DETECTION"],       // Facial expressions, tilt, landmarks
-                        ["type": "LANDMARK_DETECTION"],   // Facial and body landmarks
-                        ["type": "OBJECT_LOCALIZATION"],  // Detection of people, objects
-                        ["type": "LABEL_DETECTION"],      // General labels
-                        ["type": "TEXT_DETECTION"],       // Extract text if any
-                        ["type": "SAFE_SEARCH_DETECTION"],// Filter out unsafe content
-                        ["type": "IMAGE_PROPERTIES"]      // Dominant color analysis
+                        ["type": "FACE_DETECTION"],
+                        ["type": "OBJECT_LOCALIZATION"],
+                        ["type": "LABEL_DETECTION"],
+                        ["type": "TEXT_DETECTION"],
+                        ["type": "SAFE_SEARCH_DETECTION"],
+                        ["type": "IMAGE_PROPERTIES"]
                     ]
                 ]
             ]
@@ -56,7 +63,6 @@ struct VisionService {
         return request
     }
 
-
     private static func parseResponse(data: Data) -> [String: Any]? {
         guard let responseData = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
               let responses = responseData["responses"] as? [[String: Any]] else {
@@ -64,63 +70,62 @@ struct VisionService {
             return nil
         }
 
-        // **Log the full raw response** to check what is being returned
-        print("Full Vision API Response: \(responses)") // Add this line to log the full response
+        print("Full Vision API Response: \(responses)")
 
-        // Extract individual components from the response
         let labels = parseLabels(from: responses)
-        let webEntities = parseWebDetection(from: responses)
-        let facialExpressions = parseFaces(from: responses)
-        let dominantColors = parseColors(from: responses)
         let objects = parseObjects(from: responses)
+        let facialExpressions = parseFaces(from: responses)
+        let colors = parseColors(from: responses)
         let detectedText = parseText(from: responses)
 
-        // Construct the structured data for GPT input
         return [
             "labels": labels,
-            "webEntities": webEntities,
-            "facialExpressions": facialExpressions,
-            "dominantColors": dominantColors,
             "objects": objects,
+            "facialExpressions": facialExpressions,
+            "colors": colors,
             "text": detectedText
         ]
     }
 
+    private static func containsHuman(labels: [String], objects: [String]) -> Bool {
+        // Check if "person" or "face" is in labels or objects
+        let humanKeywords = ["person", "face"]
+        return labels.contains(where: { humanKeywords.contains($0.lowercased()) }) ||
+               objects.contains(where: { humanKeywords.contains($0.lowercased()) })
+    }
 
-    // Parse face expressions like joy, anger, etc.
     private static func parseFaces(from responses: [[String: Any]]) -> [String: Any] {
-        guard let faceAnnotations = responses.first?["faceAnnotations"] as? [[String: Any]],
-              let faceAttributes = faceAnnotations.first else {
+        guard let faceAnnotations = responses.first?["faceAnnotations"] as? [[String: Any]] else {
             print("No face annotations found")
             return [:]
         }
 
-        var facialData: [String: Any] = [:]
+        // Extract bounding boxes and identify the largest/central face
+        var mainSubjectFace: [String: Any]?
+        var largestArea: Double = 0
 
-        if let joy = faceAttributes["joyLikelihood"] as? String {
-            facialData["joy"] = joy
-        }
-        if let anger = faceAttributes["angerLikelihood"] as? String {
-            facialData["anger"] = anger
-        }
-        if let surprise = faceAttributes["surpriseLikelihood"] as? String {
-            facialData["surprise"] = surprise
-        }
-        if let sadness = faceAttributes["sorrowLikelihood"] as? String {
-            facialData["sadness"] = sadness
-        }
-        
-        // Facial landmark details
-        if let landmarks = faceAttributes["landmarks"] as? [[String: Any]] {
-            for landmark in landmarks {
-                if let type = landmark["type"] as? String, let position = landmark["position"] as? [String: Any] {
-                    facialData["landmark_\(type)"] = position
+        for annotation in faceAnnotations {
+            if let boundingPoly = annotation["boundingPoly"] as? [String: Any],
+               let vertices = boundingPoly["vertices"] as? [[String: Any]],
+               let x1 = vertices.first?["x"] as? Double,
+               let y1 = vertices.first?["y"] as? Double,
+               let x2 = vertices.last?["x"] as? Double,
+               let y2 = vertices.last?["y"] as? Double {
+                let area = abs(x2 - x1) * abs(y2 - y1)
+                if area > largestArea {
+                    largestArea = area
+                    mainSubjectFace = annotation
                 }
             }
         }
 
+        var facialData: [String: Any] = [:]
+        facialData["count"] = faceAnnotations.count
+        facialData["mainSubject"] = mainSubjectFace // Include main subject's face attributes if available
+
         return facialData
     }
+
 
     private static func parseLabels(from responses: [[String: Any]]) -> [String] {
         guard let labelAnnotations = responses.first?["labelAnnotations"] as? [[String: Any]] else { return [] }
@@ -132,16 +137,43 @@ struct VisionService {
         return localizedObjectAnnotations.compactMap { $0["name"] as? String }
     }
 
-    private static func parseColors(from responses: [[String: Any]]) -> [String: Int] {
+    private static func parseColors(from responses: [[String: Any]]) -> [String] {
         guard let imagePropertiesAnnotation = responses.first?["imagePropertiesAnnotation"] as? [String: Any],
               let dominantColors = imagePropertiesAnnotation["dominantColors"] as? [String: Any],
-              let colors = dominantColors["colors"] as? [[String: Any]],
-              let mainColor = colors.first?["color"] as? [String: Any] else { return [:] }
+              let colors = dominantColors["colors"] as? [[String: Any]] else { return [] }
 
-        let red = mainColor["red"] as? Int ?? 0
-        let green = mainColor["green"] as? Int ?? 0
-        let blue = mainColor["blue"] as? Int ?? 0
-        return ["red": red, "green": green, "blue": blue]
+        // Convert colors to human-readable names
+        return colors.compactMap { colorInfo in
+            guard let color = colorInfo["color"] as? [String: Any],
+                  let red = color["red"] as? Double,
+                  let green = color["green"] as? Double,
+                  let blue = color["blue"] as? Double else { return nil }
+
+            return describeColor(red: red, green: green, blue: blue)
+        }
+    }
+
+    private static func describeColor(red: Double, green: Double, blue: Double) -> String {
+        // Normalize RGB values to a 0–1 range
+        let r = red / 255.0
+        let g = green / 255.0
+        let b = blue / 255.0
+
+        // Simple thresholds for categorizing colors
+        if r > 0.8 && g > 0.8 && b > 0.8 { return "white" }
+        if r < 0.2 && g < 0.2 && b < 0.2 { return "black" }
+        if r > 0.8 && g < 0.2 && b < 0.2 { return "red" }
+        if r < 0.2 && g > 0.8 && b < 0.2 { return "green" }
+        if r < 0.2 && g < 0.2 && b > 0.8 { return "blue" }
+        if r > 0.8 && g > 0.8 && b < 0.2 { return "yellow" }
+        if r > 0.8 && g < 0.2 && b > 0.8 { return "magenta" }
+        if r < 0.2 && g > 0.8 && b > 0.8 { return "cyan" }
+        if r > 0.6 && g > 0.4 && b < 0.2 { return "orange" }
+        if r > 0.4 && g > 0.2 && b > 0.6 { return "violet" }
+        if r > 0.6 && g < 0.4 && b > 0.2 { return "pink" }
+
+        // Fallback to general description
+        return "grayish"
     }
 
     private static func parseText(from responses: [[String: Any]]) -> String {
@@ -149,28 +181,4 @@ struct VisionService {
               let detectedText = textAnnotations.first?["description"] as? String else { return "" }
         return detectedText
     }
-
-    // Add the parseWebDetection function here
-    private static func parseWebDetection(from responses: [[String: Any]]) -> [String] {
-        guard let webDetection = responses.first?["webDetection"] as? [String: Any] else { return [] }
-        
-        // Parse relevant web detection fields (e.g., best guesses and entities)
-        let bestGuessLabels = webDetection["bestGuessLabels"] as? [[String: Any]]
-        let webEntities = webDetection["webEntities"] as? [[String: Any]]
-        
-        var result: [String] = []
-        
-        // Add best guess labels to result
-        if let bestGuesses = bestGuessLabels {
-            result.append(contentsOf: bestGuesses.compactMap { $0["label"] as? String })
-        }
-        
-        // Add descriptions of web entities to result
-        if let entities = webEntities {
-            result.append(contentsOf: entities.compactMap { $0["description"] as? String })
-        }
-        
-        return result
-    }
 }
-

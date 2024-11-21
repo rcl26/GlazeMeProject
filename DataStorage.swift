@@ -4,11 +4,15 @@ struct DataStorage {
     static let datasetFileName = "gpt_dataset.jsonl"
 
     static func saveResponseToDataset(imageDetails: String, commentText: String, completion: String, quality: String) {
-        // Combine image details and comment into a prompt
-        let prompt = "\(imageDetails)\(commentText.isEmpty ? "" : " Comment: \(commentText)")"
+        // Only save responses with quality "good"
+        guard quality == "good" else {
+            print("Skipping bad response.")
+            return
+        }
 
         // Create the dataset entry in JSON format
-        let datasetEntry: [String: String] = [
+        let prompt = "\(imageDetails)\(commentText.isEmpty ? "" : " Comment: \(commentText)")"
+        let datasetEntry = [
             "prompt": prompt,
             "completion": completion,
             "quality": quality
@@ -44,6 +48,7 @@ struct DataStorage {
             print("Error saving dataset: \(error)")
         }
     }
+
 
     // Get the file URL for the dataset
     private static func getDatasetFileURL() -> URL {
