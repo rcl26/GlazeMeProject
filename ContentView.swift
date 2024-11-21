@@ -1,6 +1,7 @@
 import SwiftUI
 import Foundation
 
+// Define UploadedItem struct
 struct UploadedItem {
     var image: UIImage
     var response: String
@@ -14,19 +15,20 @@ struct ContentView: View {
     @State private var uploadedItems: [UploadedItem] = []
     @State private var gptResponse: String = ""
     @State private var isModalPresented: Bool = false
-    
 
     var body: some View {
         TabView {
+            // Upload View
             VStack(spacing: 40) {
                 Spacer().frame(height: 30)
+
                 // Title Text
                 Text("Upload a picture")
                     .font(.custom("Lemonada-Medium", size: 28))
                     .foregroundColor(.white)
                     .padding(.top, 50)
                     .offset(y: 30)
-                
+
                 // Circular Image Upload Area
                 Button(action: {
                     isImagePickerPresented = true
@@ -35,7 +37,7 @@ struct ContentView: View {
                         Circle()
                             .fill(Color.white.opacity(0.2))
                             .frame(width: 300, height: 300)
-                        
+
                         if let selectedImage = selectedImage {
                             Image(uiImage: selectedImage)
                                 .resizable()
@@ -52,61 +54,75 @@ struct ContentView: View {
                 }
                 .sheet(isPresented: $isImagePickerPresented) {
                     ImagePicker(selectedImage: $selectedImage)
-
                 }
-                
-                // Comment Input Field - Hide when response is present
+
+                // Comment Input Field
                 if gptResponse.isEmpty {
-                    TextField("Add comments here (optional)", text: $commentText)
+                    TextField("Hey GlazeAi, how do I look in this?", text: $commentText)
                         .padding(.leading, 25)
                         .padding(.vertical, 20)
-                        .background(Color.blue.opacity(0.1))
+                        .background(Color.blue.opacity(2.0))
                         .cornerRadius(10)
                         .foregroundColor(.white)
                         .frame(width: 350, height: 120)
                         .multilineTextAlignment(.leading)
                         .textFieldStyle(PlainTextFieldStyle())
+                        .tint(.white) // Changes the cursor color to white
+                        .offset(y: -50) // Move the text box up
+                        .onChange(of: commentText) { oldValue, newValue in
+                            if newValue.count > 50 {
+                                commentText = String(newValue.prefix(50))
+                            }
+                        }
+
                 }
 
                 Spacer()
-                
-                // Glaze Me Button or Display GPT Response
-                if gptResponse.isEmpty {
-                    // Show "Glaze Me" button when there's no response yet
-                    Button(action: {
-                        isLoading = true
-                        if let selectedImage = selectedImage, let imageData = selectedImage.jpegData(compressionQuality: 0.8) {
-                            // Step 1: Analyze the image with Vision API using VisionService
-                            VisionService.analyzeImage(with: imageData, apiKey: Config.googleVisionAPIKey) { structuredData in
-                                if let structuredData = structuredData {
-                                    // Step 2: Directly send structured data to GPT-4 API using GPTService
-                                    GPTService.getGPTResponse(subject: "person", context: structuredData) { response in
-                                        DispatchQueue.main.async {
-                                            isLoading = false
-                                            if let response = response {
-                                                self.gptResponse = response
-                                                uploadedItems.append(UploadedItem(image: selectedImage, response: response))
 
-                                                isModalPresented = true  // Show the modal when response is ready
-                                            } else {
-                                                self.gptResponse = "Failed to generate response."
+                // Glaze Me Button or Loading Animation
+                if let _ = selectedImage, gptResponse.isEmpty {
+                    if isLoading {
+                        VStack(spacing: 10) {
+                            Text("Preparing to glaze")
+                                .font(.custom("Lemonada-Bold", size: 20))
+                                .foregroundColor(Color.yellow) // Matches the "Glaze Me" button color
+                            ProgressView()
+                                .progressViewStyle(CircularProgressViewStyle(tint: .yellow))
+                                .scaleEffect(2.0) // Larger animation
+                        }
+                        .padding(.top, -120) // Adds spacing from the rest of the content
+                    } else {
+                        Button(action: {
+                            isLoading = true
+                            if let selectedImage = selectedImage, let imageData = selectedImage.jpegData(compressionQuality: 0.8) {
+                                VisionService.analyzeImage(with: imageData, apiKey: Config.googleVisionAPIKey) { structuredData in
+                                    if let structuredData = structuredData {
+                                        // Log structured data to verify that it's correctly passed
+                                        print("Structured Data to GPT: \(structuredData)")
+
+                                        GPTService.getGPTResponse(subject: "person", context: structuredData, commentText: commentText) { response in
+                                            DispatchQueue.main.async {
+                                                isLoading = false
+                                                if let response = response {
+                                                    self.gptResponse = response
+                                                    uploadedItems.append(UploadedItem(image: selectedImage, response: response))
+                                                    isModalPresented = true
+                                                } else {
+                                                    self.gptResponse = "Failed to generate response."
+                                                }
                                             }
                                         }
-                                    }
-                                } else {
-                                    DispatchQueue.main.async {
-                                        isLoading = false
-                                        self.gptResponse = "Failed to analyze the image."
+
+
+                                    } else {
+                                        DispatchQueue.main.async {
+                                            isLoading = false
+                                            self.gptResponse = "Failed to analyze the image."
+                                        }
                                     }
                                 }
                             }
-                        }
-                    }) {
-                        if isLoading {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .yellow))
-                                .scaleEffect(2.0)
-                        } else {
+                        }) {
                             Text("Glaze me")
                                 .font(.custom("Lemonada-Bold", size: 24))
                                 .frame(width: 200, height: 75)
@@ -114,26 +130,12 @@ struct ContentView: View {
                                 .foregroundColor(.white)
                                 .cornerRadius(100)
                         }
+
+                        .offset(x: 0, y: -90)
                     }
-                    .disabled(isLoading)
-                    .offset(x: 0, y: -90)
-                } else {
-                    // Show the GPT Response once available
-                    if !gptResponse.isEmpty {
-                        Text(gptResponse)
-                            .font(.custom("Lemonada-Regular", size: 20))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 20)
-                            .background(Color.blue.opacity(0.8))
-                            .cornerRadius(15)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity)
-                            .fixedSize(horizontal: false, vertical: true)  // Ensures full height for the response
-                            .padding(.top, 50)
-                    }
+
                 }
-                
+
                 Spacer()
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -141,7 +143,6 @@ struct ContentView: View {
             .ignoresSafeArea()
             .sheet(isPresented: $isModalPresented) {
                 VStack {
-                    // Smaller Circular Image
                     if let selectedImage = selectedImage {
                         Image(uiImage: selectedImage)
                             .resizable()
@@ -150,8 +151,6 @@ struct ContentView: View {
                             .clipShape(Circle())
                             .padding(.top, 20)
                     }
-
-                    // GPT Response Text
                     Text(gptResponse)
                         .font(.custom("Lemonada-Regular", size: 17))
                         .foregroundColor(.white)
@@ -161,15 +160,12 @@ struct ContentView: View {
                         .cornerRadius(15)
                         .multilineTextAlignment(.center)
                         .padding(.top, 20)
-
                     Spacer()
-
-                    // Close Button
                     Button(action: {
                         isModalPresented = false
-                        selectedImage = nil  // Clear the selected image
-                        gptResponse = ""  // Clear the GPT response
-                        commentText = ""  // Clear the comment text
+                        selectedImage = nil
+                        gptResponse = ""
+                        commentText = ""
                     }) {
                         Text("Close")
                             .font(.custom("Lemonada-Bold", size: 20))
@@ -180,7 +176,6 @@ struct ContentView: View {
                             .cornerRadius(25)
                     }
                     .padding(.bottom, 30)
-
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.9), Color.blue]), startPoint: .top, endPoint: .bottom))
@@ -189,9 +184,9 @@ struct ContentView: View {
             .tabItem {
                 Label("Upload", systemImage: "camera.fill")
             }
-            
-            GalleryView(uploadedItems: $uploadedItems)
 
+            // Gallery View
+            GalleryView(uploadedItems: $uploadedItems)
                 .tabItem {
                     Label("Gallery", systemImage: "photo.fill.on.rectangle.fill")
                 }
