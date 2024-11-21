@@ -15,6 +15,9 @@ struct ContentView: View {
     @State private var uploadedItems: [UploadedItem] = []
     @State private var gptResponse: String = ""
     @State private var isModalPresented: Bool = false
+    @State private var imageDetails: String = "" // Holds Vision API data
+
+
 
     var body: some View {
         TabView {
@@ -97,8 +100,9 @@ struct ContentView: View {
                             if let selectedImage = selectedImage, let imageData = selectedImage.jpegData(compressionQuality: 0.8) {
                                 VisionService.analyzeImage(with: imageData, apiKey: Config.googleVisionAPIKey) { structuredData in
                                     if let structuredData = structuredData {
-                                        // Log structured data to verify that it's correctly passed
-                                        print("Structured Data to GPT: \(structuredData)")
+                                        // Save the structured Vision API output for later
+                                        let visionOutput = structuredData // Add this variable
+                                        print("Structured Data to GPT: \(visionOutput)") // Log it for debugging
 
                                         GPTService.getGPTResponse(subject: "person", context: structuredData, commentText: commentText) { response in
                                             DispatchQueue.main.async {
@@ -107,13 +111,20 @@ struct ContentView: View {
                                                     self.gptResponse = response
                                                     uploadedItems.append(UploadedItem(image: selectedImage, response: response))
                                                     isModalPresented = true
+
+                                                    // Save the visionOutput for the feedback buttons
+                                                    if let visionOutputData = try? JSONSerialization.data(withJSONObject: visionOutput, options: []),
+                                                       let visionOutputString = String(data: visionOutputData, encoding: .utf8) {
+                                                        self.imageDetails = visionOutputString
+                                                    } else {
+                                                        self.imageDetails = "Failed to serialize Vision API output"
+                                                    }
+
                                                 } else {
                                                     self.gptResponse = "Failed to generate response."
                                                 }
                                             }
                                         }
-
-
                                     } else {
                                         DispatchQueue.main.async {
                                             isLoading = false
@@ -130,8 +141,8 @@ struct ContentView: View {
                                 .foregroundColor(.white)
                                 .cornerRadius(100)
                         }
-
                         .offset(x: 0, y: -90)
+
                     }
 
                 }
@@ -143,6 +154,7 @@ struct ContentView: View {
             .ignoresSafeArea()
             .sheet(isPresented: $isModalPresented) {
                 VStack {
+                    // Display the uploaded image
                     if let selectedImage = selectedImage {
                         Image(uiImage: selectedImage)
                             .resizable()
@@ -151,6 +163,8 @@ struct ContentView: View {
                             .clipShape(Circle())
                             .padding(.top, 20)
                     }
+
+                    // Display the GPT response
                     Text(gptResponse)
                         .font(.custom("Lemonada-Regular", size: 17))
                         .foregroundColor(.white)
@@ -160,27 +174,85 @@ struct ContentView: View {
                         .cornerRadius(15)
                         .multilineTextAlignment(.center)
                         .padding(.top, 20)
-                    Spacer()
-                    Button(action: {
-                        isModalPresented = false
-                        selectedImage = nil
-                        gptResponse = ""
-                        commentText = ""
-                    }) {
-                        Text("Close")
-                            .font(.custom("Lemonada-Bold", size: 20))
-                            .padding(.horizontal, 40)
-                            .padding(.vertical, 15)
-                            .background(Color.yellow)
-                            .foregroundColor(.white)
-                            .cornerRadius(25)
+
+                    // Add feedback buttons
+                    HStack(spacing: 20) {
+                        // "Bad" Button (left side)
+                        Button(action: {
+                            // Save response to dataset with quality "bad"
+                            DataStorage.saveResponseToDataset(
+                                imageDetails: imageDetails, // Pass Vision API data
+                                commentText: commentText,
+                                completion: gptResponse,
+                                quality: "bad"
+                            )
+                            print("Saved response as 'bad'")
+
+                            // Reset the app state
+                            isModalPresented = false
+                            selectedImage = nil
+                            gptResponse = ""
+                            commentText = ""
+                        }) {
+                            Text("Bad 👎")
+                                .font(.custom("Lemonada-Bold", size: 20))
+                                .padding(.horizontal, 40)
+                                .padding(.vertical, 15)
+                                .background(Color.red.opacity(1.0))
+                                .foregroundColor(.white)
+                                .cornerRadius(25)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 25)
+                                        .stroke(Color.red, lineWidth: 2)
+                                )
+                        }
+
+                        // "Good" Button (right side)
+                        Button(action: {
+                            // Save response to dataset with quality "good"
+                            DataStorage.saveResponseToDataset(
+                                imageDetails: imageDetails, // Pass Vision API data
+                                commentText: commentText,
+                                completion: gptResponse,
+                                quality: "good"
+                            )
+                            print("Saved response as 'good'")
+
+                            // Reset the app state
+                            isModalPresented = false
+                            selectedImage = nil
+                            gptResponse = ""
+                            commentText = ""
+                        }) {
+                            Text("Good 👍")
+                                .font(.custom("Lemonada-Bold", size: 20))
+                                .padding(.horizontal, 40)
+                                .padding(.vertical, 15)
+                                .background(Color.green.opacity(1.0))
+                                .foregroundColor(.white)
+                                .cornerRadius(25)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 25)
+                                        .stroke(Color.green, lineWidth: 2)
+                                )
+                        }
                     }
-                    .padding(.bottom, 30)
+                    .padding(.top, 20)
+
+
+
+                    Spacer()
+
+
+
+
+                    
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.9), Color.blue]), startPoint: .top, endPoint: .bottom))
                 .ignoresSafeArea()
             }
+
             .tabItem {
                 Label("Upload", systemImage: "camera.fill")
             }
