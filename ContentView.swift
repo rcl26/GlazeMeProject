@@ -100,6 +100,8 @@ struct ContentView: View {
                             if let selectedImage = selectedImage, let imageData = selectedImage.jpegData(compressionQuality: 0.8) {
                                 VisionService.analyzeImage(with: imageData, apiKey: Config.googleVisionAPIKey) { structuredData in
                                     if let structuredData = structuredData {
+                                        print("Debug – Structured Data in Completion Block: \(structuredData)")
+
                                         if structuredData["noHuman"] as? Bool == true {
                                             DispatchQueue.main.async {
                                                 isLoading = false
@@ -122,10 +124,21 @@ struct ContentView: View {
                                             subject = "person"
                                         }
 
-                                        GPTService.getGPTResponse(subject: subject, context: structuredData, commentText: commentText) { response in
+                                        let isGroupPhotoValue = structuredData["isGroupPhoto"] as? Bool ?? false
+                                        print("Debug – Extracted isGroupPhotoValue in ContentView: \(isGroupPhotoValue)")
+
+
+
+
+                                        GPTService.getGPTResponse(
+                                            subject: subject,
+                                            context: structuredData,
+                                            isGroupPhoto: isGroupPhotoValue, // Properly check for group
+                                            commentText: commentText
+                                        ) { response in // Correctly define the closure parameter here
                                             DispatchQueue.main.async {
                                                 isLoading = false
-                                                if let response = response {
+                                                if let response = response { // Properly unwrap the response
                                                     self.gptResponse = response
                                                     uploadedItems.append(UploadedItem(image: selectedImage, response: response))
                                                     isModalPresented = true
@@ -134,6 +147,8 @@ struct ContentView: View {
                                                 }
                                             }
                                         }
+
+
                                     } else {
                                         DispatchQueue.main.async {
                                             isLoading = false
