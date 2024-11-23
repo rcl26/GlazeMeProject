@@ -10,26 +10,46 @@ struct GPTService {
         let flaggedWords = [
             // Objectifying terms
             "hot", "sexy", "attractive", "objectify", "beautiful in a sexual way",
-            "body", "curves", "provocative", "tempting", "arousing", "sensual",
-            
+            "body", "curves", "provocative", "tempting", "arousing", "sensual", "voluptuous",
+            "hourglass", "figure", "assets", "busty", "petite", "legs", "thighs", "hips", "waist",
+
             // Explicit language
-            "bang", "fuck", "pound", "kiss", "screw", "hook up", "make out",
-            
+            "bang", "fuck", "smash", "pound", "kiss", "screw", "hook up", "make out",
+            "hump", "grind", "lick", "tongue", "oral", "moan", "groan", "orgasm", "climax",
+
             // Overly personal/invasive terms
             "undress", "strip", "naked", "bedroom", "lingerie", "touch",
-            "fantasy", "fetish", "sexual",
+            "fantasy", "fetish", "sexual", "kinky", "intimate", "foreplay", "spank", "dominate", "cum", "shit", "discharge",
+
+            // Body parts (often objectified)
+            "boobs", "breasts", "butt", "ass", "tits", "nipples", "vagina", "penis",
+            "genitals", "thighs", "crotch", "groin", "rear", "privates", "chest", "abs", "dick", "butt", "cans", "knockers",
 
             // General derogatory/inappropriate language
-            "slut", "whore", "naughty", "dirty", "raunchy", "tease"
+            "slut", "whore", "naughty", "dirty", "raunchy", "tease", "skank", "ho", "trash",
+            "easy", "bimbo", "playboy", "sugar daddy", "sugar baby", "escort", "hooker",
+            "mistress", "cheater", "homewrecker",
+
+            // Other potentially problematic terms
+            "seduce", "tempt", "erotic", "lust", "desire", "obsession", "infatuation",
+            "plaything", "toy", "trophy", "prize", "dominatrix", "submission", "slave",
+            "manhood", "womanhood", "booty", "peach"
         ]
 
+
         // **Check for flagged keywords in commentText** (before Safe Search)
-            if let userQuery = commentText,
-               flaggedWords.contains(where: { userQuery.localizedCaseInsensitiveContains($0) }) {
-                print("Flagged query detected: \(userQuery)")
-                completion("I'm sorry, I can't answer that kind of question. Let's keep things positive and respectful!")
+        if let userQuery = commentText {
+            let lowercasedQuery = userQuery.lowercased()
+            let regex = "\\b(\(flaggedWords.joined(separator: "|")))(?=\\b)"
+            
+            if let _ = lowercasedQuery.range(of: regex, options: .regularExpression) {
+                print("Flagged query detected in user query: \(userQuery)")
+                completion("Sorry, your query was deemed inappropriate by our review. Let's keep things positive and respectful!")
                 return
             }
+        }
+
+
 
         
         // Check for inappropriate content in Safe Search
