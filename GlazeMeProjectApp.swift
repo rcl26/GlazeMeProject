@@ -1,17 +1,18 @@
-//
-//  GlazeMeProjectApp.swift
-//  GlazeMeProject
-//
-//  Created by Ryan LaTorre on 11/11/24.
-//
-
 import SwiftUI
+import FirebaseCore
 
 @main
 struct GlazeMeProjectApp: App {
+    init() {
+        // Initialize Firebase
+        FirebaseApp.configure()
+    }
+
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            // Start with the LoginView
+            LoginView()
         }
     }
 }
+

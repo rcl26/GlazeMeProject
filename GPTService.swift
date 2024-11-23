@@ -2,6 +2,33 @@ import Foundation
 
 struct GPTService {
     
+    static func moderateUserInput(userInput: String, completion: @escaping (Bool, String?) -> Void) {
+        let url = URL(string: "https://api.openai.com/v1/moderations")!
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.addValue("Bearer \(Config.openAIAPIKey)", forHTTPHeaderField: "Authorization")
+        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        let requestBody: [String: Any] = ["input": userInput]
+        request.httpBody = try? JSONSerialization.data(withJSONObject: requestBody)
+
+        URLSession.shared.dataTask(with: request) { data, response, error in
+            guard let data = data, error == nil else {
+                completion(false, "Network error: \(error?.localizedDescription ?? "Unknown error")")
+                return
+            }
+
+            if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
+               let results = json["results"] as? [[String: Any]],
+               let flagged = results.first?["flagged"] as? Bool {
+                completion(flagged, nil) // Returns true if flagged, false otherwise
+            } else {
+                completion(false, "Failed to parse Moderation API response")
+            }
+        }.resume()
+    }
+    
+    
     static func getGPTResponse(subject: String, context: [String: Any], isGroupPhoto: Bool, commentText: String?, completion: @escaping (String?) -> Void) {
         
         // Debug: Log the value of isGroupPhoto
@@ -138,7 +165,7 @@ struct GPTService {
 
         // Build the request body
         let requestBody: [String: Any] = [
-            "model": "gpt-4",
+            "model": "gpt-4o-mini",
             "messages": [
                 ["role": "system", "content": "You are a trendy friend specialized in providing compliments based on image analysis."],
                 ["role": "user", "content": prompt]

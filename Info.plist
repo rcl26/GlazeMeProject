@@ -10,5 +10,17 @@
 		<string>Lemonada-Regular.ttf</string>
 		<string>Lemonada-SemiBold.ttf</string>
 	</array>
+	<key>GIDClientID</key>
+	<string>RLC.GlazeMeProject</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.387902855657-njomudejdbd9me2ph42nsosvq22f20om</string>
+				<string>glazemeproject.rlc</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>
