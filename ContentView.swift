@@ -16,6 +16,7 @@ struct ContentView: View {
     @State private var gptResponse: String = ""
     @State private var isModalPresented: Bool = false
     @State private var imageDetails: String = "" // Holds Vision API data
+    
 
 
 
@@ -84,17 +85,8 @@ struct ContentView: View {
 
                 // Glaze Me Button or Loading Animation
                 if let _ = selectedImage, gptResponse.isEmpty {
-                    if isLoading {
-                        VStack(spacing: 10) {
-                            Text("Preparing to glaze")
-                                .font(.custom("Lemonada-Bold", size: 20))
-                                .foregroundColor(Color.yellow) // Matches the "Glaze Me" button color
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .yellow))
-                                .scaleEffect(2.0) // Larger animation
-                        }
-                        .padding(.top, -120) // Adds spacing from the rest of the content
-                    } else {
+                    ZStack {
+                        // Glaze Me Button
                         Button(action: {
                             isLoading = true
                             if let selectedImage = selectedImage, let imageData = selectedImage.jpegData(compressionQuality: 0.8) {
@@ -102,6 +94,20 @@ struct ContentView: View {
                                     if let structuredData = structuredData {
                                         print("Debug – Structured Data in Completion Block: \(structuredData)")
 
+                                        // Check Safe Search for inappropriate content
+                                        if let error = structuredData["error"] as? String {
+                                            DispatchQueue.main.async {
+                                                isLoading = false
+                                                gptResponse = error // Use the error message from structured data
+                                                isModalPresented = true
+                                            }
+                                            print("Error detected in structured data: \(error)") // Debug log
+                                            return // Stop further processing
+                                        }
+
+
+
+                                        // Check for no human in the image
                                         if structuredData["noHuman"] as? Bool == true {
                                             DispatchQueue.main.async {
                                                 isLoading = false
@@ -117,28 +123,24 @@ struct ContentView: View {
 
                                         let subject: String
                                         if faceCount > 1 && mainSubject == nil {
-                                            // If there are multiple people but no dominant face, treat it as a group
                                             subject = "group"
                                         } else {
-                                            // Otherwise, focus on the main subject
                                             subject = "person"
                                         }
 
                                         let isGroupPhotoValue = structuredData["isGroupPhoto"] as? Bool ?? false
                                         print("Debug – Extracted isGroupPhotoValue in ContentView: \(isGroupPhotoValue)")
 
-
-
-
+                                        // Pass valid data to GPT Service
                                         GPTService.getGPTResponse(
                                             subject: subject,
                                             context: structuredData,
-                                            isGroupPhoto: isGroupPhotoValue, // Properly check for group
+                                            isGroupPhoto: isGroupPhotoValue,
                                             commentText: commentText
-                                        ) { response in // Correctly define the closure parameter here
+                                        ) { response in
                                             DispatchQueue.main.async {
                                                 isLoading = false
-                                                if let response = response { // Properly unwrap the response
+                                                if let response = response {
                                                     self.gptResponse = response
                                                     uploadedItems.append(UploadedItem(image: selectedImage, response: response))
                                                     isModalPresented = true
@@ -147,8 +149,6 @@ struct ContentView: View {
                                                 }
                                             }
                                         }
-
-
                                     } else {
                                         DispatchQueue.main.async {
                                             isLoading = false
@@ -157,6 +157,11 @@ struct ContentView: View {
                                     }
                                 }
                             }
+
+
+
+
+                            
                         }) {
                             Text("Glaze me")
                                 .font(.custom("Lemonada-Bold", size: 24))
@@ -166,13 +171,23 @@ struct ContentView: View {
                                 .cornerRadius(100)
                         }
                         .offset(x: 0, y: -90)
+                        .opacity(isLoading ? 0 : 1) // Hide button when loading
 
-
-
-
+                        // Loading Animation
+                        if isLoading {
+                            VStack(spacing: 10) {
+                                Text("Preparing to glaze")
+                                    .font(.custom("Lemonada-Bold", size: 20))
+                                    .foregroundColor(Color.yellow)
+                                ProgressView()
+                                    .progressViewStyle(CircularProgressViewStyle(tint: .yellow))
+                                    .scaleEffect(2.0)
+                            }
+                            .padding(.top, -120)
+                        }
                     }
-
                 }
+
 
                 Spacer()
             }

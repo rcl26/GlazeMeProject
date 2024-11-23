@@ -19,22 +19,36 @@ struct VisionService {
                 completion(nil)
                 return
             }
-            
+
             guard let data = data else {
                 print("Vision API Error: No data returned")
                 completion(nil)
                 return
             }
-            
+
             if var structuredData = parseResponse(data: data, imageWidth: imageWidth, imageHeight: imageHeight) {
                 // Add image dimensions to the structured data
                 structuredData["imageWidth"] = imageWidth
                 structuredData["imageHeight"] = imageHeight
 
-                // Determine if this is a group photo
+                // Ensure isGroupPhoto is always calculated
                 if let facialData = structuredData["facialExpressions"] as? [String: Any],
                    let faceCount = facialData["count"] as? Int {
-                    structuredData["isGroupPhoto"] = (faceCount > 1) // Set true if multiple faces detected
+                    structuredData["isGroupPhoto"] = (faceCount > 1) // True if multiple faces detected
+                } else {
+                    structuredData["isGroupPhoto"] = false // Default to false if no facial data exists
+                }
+
+                // Debug: Log group photo detection
+                print("Debug - Group Photo Detection: \(structuredData["isGroupPhoto"] ?? "N/A")")
+
+                // Safe Search handling
+                if let safeSearch = structuredData["safeSearch"] as? [String: String],
+                   safeSearch["adult"] == "LIKELY" || safeSearch["adult"] == "VERY_LIKELY" ||
+                   safeSearch["violence"] == "LIKELY" || safeSearch["violence"] == "VERY_LIKELY" ||
+                   safeSearch["racy"] == "LIKELY" || safeSearch["racy"] == "VERY_LIKELY" {
+                    print("Inappropriate content detected: \(safeSearch)")
+                    structuredData["error"] = "Inappropriate content detected. Please upload a different image."
                 }
 
                 // Check for human-related labels or objects
@@ -45,7 +59,7 @@ struct VisionService {
                     completion(["noHuman": true])
                 } else {
                     // Debug: Print the structured data
-                    print("Structured Data Before Completion: \(structuredData)")
+                    print("Debug - Final Structured Data Before Completion: \(structuredData)")
 
                     // Pass structured data to the completion handler
                     completion(structuredData)
@@ -56,17 +70,16 @@ struct VisionService {
             }
 
         }
-        
+
         dataTask.resume()
     }
-
 
     private static func createURLRequest(with imageData: Data, apiKey: String) -> URLRequest {
         let url = URL(string: "https://vision.googleapis.com/v1/images:annotate?key=\(apiKey)")!
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.addValue("application/json", forHTTPHeaderField: "Content-Type")
-        
+
         let base64Image = imageData.base64EncodedString()
         let requestBody: [String: Any] = [
             "requests": [
@@ -77,7 +90,7 @@ struct VisionService {
                         ["type": "OBJECT_LOCALIZATION"],
                         ["type": "LABEL_DETECTION"],
                         ["type": "TEXT_DETECTION"],
-                        ["type": "SAFE_SEARCH_DETECTION"],
+                        ["type": "SAFE_SEARCH_DETECTION"], // Add Safe Search Detection
                         ["type": "IMAGE_PROPERTIES"]
                     ]
                 ]
@@ -88,7 +101,6 @@ struct VisionService {
     }
 
     private static func parseResponse(data: Data, imageWidth: Double, imageHeight: Double) -> [String: Any]? {
-
         guard let responseData = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
               let responses = responseData["responses"] as? [[String: Any]] else {
             print("Failed to parse response data.")
@@ -99,26 +111,34 @@ struct VisionService {
 
         let labels = parseLabels(from: responses)
         let objects = parseObjects(from: responses)
-        let facialData = parseFaces(from: responses, imageWidth: imageWidth, imageHeight: imageHeight) // Correct name
+        let facialData = parseFaces(from: responses, imageWidth: imageWidth, imageHeight: imageHeight)
         let colors = parseColors(from: responses)
         let detectedText = parseText(from: responses)
-
-        // Debug: Log facial data to confirm group photo info is included
-        print("Facial Data in parseResponse: \(facialData)") // Use the correct name here
+        let safeSearch = parseSafeSearch(from: responses)
 
         return [
             "labels": labels,
             "objects": objects,
-            "facialExpressions": facialData, // Ensure this matches the corrected name
+            "facialExpressions": facialData,
             "colors": colors,
-            "text": detectedText
+            "text": detectedText,
+            "safeSearch": safeSearch // Include Safe Search in structured data
         ]
+    }
 
+    private static func parseSafeSearch(from responses: [[String: Any]]) -> [String: String] {
+        guard let safeSearchAnnotation = responses.first?["safeSearchAnnotation"] as? [String: Any] else {
+            return [:]
+        }
 
+        return [
+            "adult": safeSearchAnnotation["adult"] as? String ?? "UNKNOWN",
+            "violence": safeSearchAnnotation["violence"] as? String ?? "UNKNOWN",
+            "racy": safeSearchAnnotation["racy"] as? String ?? "UNKNOWN"
+        ]
     }
 
     private static func containsHuman(labels: [String], objects: [String]) -> Bool {
-        // Check if "person" or "face" is in labels or objects
         let humanKeywords = ["person", "face"]
         return labels.contains(where: { humanKeywords.contains($0.lowercased()) }) ||
                objects.contains(where: { humanKeywords.contains($0.lowercased()) })
@@ -130,51 +150,6 @@ struct VisionService {
             return [:]
         }
 
-        // Minimum threshold for face size
-        let minimumAreaThreshold: Double = 0.002
-
-        let calculateBoundingBoxArea = { (vertices: [[String: Any]], imageWidth: Double, imageHeight: Double) -> Double in
-            print("Raw Vertices: \(vertices)")
-
-            // Extract all x and y coordinates
-            let xCoordinates = vertices.compactMap { $0["x"] as? Double }
-            let yCoordinates = vertices.compactMap { $0["y"] as? Double }
-
-            // Ensure we have enough points
-            guard xCoordinates.count == 4, yCoordinates.count == 4 else {
-                print("Invalid vertices data: \(vertices)")
-                return 0
-            }
-
-            // Calculate the bounding box explicitly
-            let x1 = xCoordinates.min() ?? 0
-            let x2 = xCoordinates.max() ?? 0
-            let y1 = yCoordinates.min() ?? 0
-            let y2 = yCoordinates.max() ?? 0
-
-            print("Extracted Vertices - x1: \(x1), x2: \(x2), y1: \(y1), y2: \(y2)")
-
-            let boxWidth = abs(x2 - x1)
-            let boxHeight = abs(y2 - y1)
-            let relativeArea = (boxWidth * boxHeight) / (imageWidth * imageHeight)
-
-            print("Box Width: \(boxWidth), Box Height: \(boxHeight), Relative Area: \(relativeArea)")
-            return relativeArea
-        }
-
-        let isCentral = { (vertices: [[String: Any]], imageWidth: Double) -> Bool in
-            // Use the correct bounding box center calculation
-            let xCoordinates = vertices.compactMap { $0["x"] as? Double }
-            guard let x1 = xCoordinates.min(), let x2 = xCoordinates.max() else {
-                print("Invalid vertices for isCentral check")
-                return false
-            }
-
-            let centerX = (x1 + x2) / 2.0 / imageWidth // Normalize to image width
-            print("Bounding Box CenterX (Relative): \(centerX)")
-            return centerX > 0.3 && centerX < 0.7 // Consider central if within 30-70% of the image width
-        }
-
         var filteredSubjects: [[String: Any]] = []
         var largestArea: Double = 0
         var mainSubjectFace: [String: Any]?
@@ -182,15 +157,10 @@ struct VisionService {
         for annotation in faceAnnotations {
             if let boundingPoly = annotation["boundingPoly"] as? [String: Any],
                let vertices = boundingPoly["vertices"] as? [[String: Any]] {
-
-                // Calculate the relative area of the bounding box
                 let area = calculateBoundingBoxArea(vertices, imageWidth, imageHeight)
 
-                // Check if the bounding box is central
-                if area > minimumAreaThreshold && isCentral(vertices, imageWidth) {
+                if area > 0.002 { // Minimum area threshold
                     filteredSubjects.append(annotation)
-
-                    // Identify the largest face
                     if area > largestArea {
                         largestArea = area
                         mainSubjectFace = annotation
@@ -199,30 +169,16 @@ struct VisionService {
             }
         }
 
-        // Determine if it's a group photo
         let isGroupPhoto = filteredSubjects.count > 1
+        let resolvedMainSubject: [String: Any]? = isGroupPhoto ? nil : mainSubjectFace
 
-        // Debug: Print detection details
-        print("Filtered Subjects Count: \(filteredSubjects.count)")
-        print("Is Group Photo: \(isGroupPhoto)")
-        print("Raw Face Annotations: \(faceAnnotations)")
-
-        var facialData: [String: Any] = [:]
-        facialData["count"] = filteredSubjects.count
-        facialData["mainSubject"] = isGroupPhoto ? nil : mainSubjectFace
-        facialData["groupSubjects"] = isGroupPhoto ? filteredSubjects : nil
-        facialData["isGroupPhoto"] = isGroupPhoto // Explicitly add this to ensure it's communicated correctly
-        print("Facial Data in parseResponse: \(facialData)")
-
-
-        return facialData
+        return [
+            "count": filteredSubjects.count,
+            "mainSubject": resolvedMainSubject ?? [:],
+            "groupSubjects": isGroupPhoto ? (filteredSubjects as [[String: Any]]? ?? []) : [],
+            "isGroupPhoto": isGroupPhoto
+        ]
     }
-
-
-
-
-
-
 
     private static func parseLabels(from responses: [[String: Any]]) -> [String] {
         guard let labelAnnotations = responses.first?["labelAnnotations"] as? [[String: Any]] else { return [] }
@@ -239,7 +195,6 @@ struct VisionService {
               let dominantColors = imagePropertiesAnnotation["dominantColors"] as? [String: Any],
               let colors = dominantColors["colors"] as? [[String: Any]] else { return [] }
 
-        // Convert colors to human-readable names
         return colors.compactMap { colorInfo in
             guard let color = colorInfo["color"] as? [String: Any],
                   let red = color["red"] as? Double,
@@ -250,32 +205,33 @@ struct VisionService {
         }
     }
 
-    private static func describeColor(red: Double, green: Double, blue: Double) -> String {
-        // Normalize RGB values to a 0–1 range
-        let r = red / 255.0
-        let g = green / 255.0
-        let b = blue / 255.0
-
-        // Simple thresholds for categorizing colors
-        if r > 0.8 && g > 0.8 && b > 0.8 { return "white" }
-        if r < 0.2 && g < 0.2 && b < 0.2 { return "black" }
-        if r > 0.8 && g < 0.2 && b < 0.2 { return "red" }
-        if r < 0.2 && g > 0.8 && b < 0.2 { return "green" }
-        if r < 0.2 && g < 0.2 && b > 0.8 { return "blue" }
-        if r > 0.8 && g > 0.8 && b < 0.2 { return "yellow" }
-        if r > 0.8 && g < 0.2 && b > 0.8 { return "magenta" }
-        if r < 0.2 && g > 0.8 && b > 0.8 { return "cyan" }
-        if r > 0.6 && g > 0.4 && b < 0.2 { return "orange" }
-        if r > 0.4 && g > 0.2 && b > 0.6 { return "violet" }
-        if r > 0.6 && g < 0.4 && b > 0.2 { return "pink" }
-
-        // Fallback to general description
-        return "grayish"
-    }
-
     private static func parseText(from responses: [[String: Any]]) -> String {
         guard let textAnnotations = responses.first?["textAnnotations"] as? [[String: Any]],
               let detectedText = textAnnotations.first?["description"] as? String else { return "" }
         return detectedText
     }
+
+    private static func calculateBoundingBoxArea(_ vertices: [[String: Any]], _ imageWidth: Double, _ imageHeight: Double) -> Double {
+        let xCoordinates = vertices.compactMap { $0["x"] as? Double }
+        let yCoordinates = vertices.compactMap { $0["y"] as? Double }
+
+        guard xCoordinates.count == 4, yCoordinates.count == 4 else { return 0 }
+
+        let x1 = xCoordinates.min() ?? 0
+        let x2 = xCoordinates.max() ?? 0
+        let y1 = yCoordinates.min() ?? 0
+        let y2 = yCoordinates.max() ?? 0
+
+        return abs((x2 - x1) * (y2 - y1)) / (imageWidth * imageHeight)
+    }
+
+    private static func describeColor(red: Double, green: Double, blue: Double) -> String {
+        if red > 200, green > 200, blue > 200 { return "white" }
+        if red < 50, green < 50, blue < 50 { return "black" }
+        if red > green, red > blue { return "red" }
+        if green > red, green > blue { return "green" }
+        if blue > red, blue > green { return "blue" }
+        return "gray"
+    }
 }
+

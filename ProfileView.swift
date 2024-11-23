@@ -5,7 +5,7 @@ struct ProfileView: View {
     @State private var userName: String = "John Doe"
     @State private var userEmail: String = "john.doe@example.com"
     @State private var profileImage: UIImage? = nil
-    @State private var freeUsesRemaining: Int = 5
+    @State private var userPlan: String = "Free Trial"  // Added user plan
 
     var body: some View {
         VStack(spacing: 30) {
@@ -52,27 +52,28 @@ struct ProfileView: View {
                 .frame(width: 300)
                 .background(Color.blue)
 
-            // Free Uses Counter
+            // User Plan (instead of free uses)
             VStack {
-                Text("Free Uses Remaining")
+                Text("Current Plan")
                     .font(.custom("Lemonada-Regular", size: 18))
                     .foregroundColor(.black)
-                Text("\(freeUsesRemaining) / 5")
+                Text("\(userPlan)")  // Display user's current plan
                     .font(.custom("Lemonada-Bold", size: 24))
-                    .foregroundColor(freeUsesRemaining > 0 ? .green : .red)
+                    .foregroundColor(userPlan == "Free Trial" ? .green : .blue)
             }
 
-            // Subscription Prompt
-            if freeUsesRemaining == 0 {
+            // Subscription Prompt for Free Plan
+            if userPlan == "Free Trial" {
                 VStack(spacing: 10) {
-                    Text("You’ve used all your free uses!")
+                    Text("Your free trial is active!")
                         .font(.custom("Lemonada-Regular", size: 18))
-                        .foregroundColor(.red)
+                        .foregroundColor(.black)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 20)
 
                     Button(action: {
                         // Add subscription flow here
+                        userPlan = "Premium"  // Example: Changing the plan to Premium
                     }) {
                         Text("Subscribe Now")
                             .font(.custom("Lemonada-Bold", size: 20))
@@ -91,3 +92,4 @@ struct ProfileView: View {
         .background(Color.white.ignoresSafeArea())
     }
 }
+

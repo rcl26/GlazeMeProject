@@ -7,6 +7,39 @@ struct GPTService {
         // Debug: Log the value of isGroupPhoto
         print("Debug - Is Group Photo received in GPTService: \(isGroupPhoto)")
         
+        let flaggedWords = [
+            // Objectifying terms
+            "hot", "sexy", "attractive", "objectify", "beautiful in a sexual way",
+            "body", "curves", "provocative", "tempting", "arousing", "sensual",
+            
+            // Explicit language
+            "bang", "fuck", "pound", "kiss", "screw", "hook up", "make out",
+            
+            // Overly personal/invasive terms
+            "undress", "strip", "naked", "bedroom", "lingerie", "touch",
+            "fantasy", "fetish", "sexual",
+
+            // General derogatory/inappropriate language
+            "slut", "whore", "naughty", "dirty", "raunchy", "tease"
+        ]
+
+        // **Check for flagged keywords in commentText** (before Safe Search)
+            if let userQuery = commentText,
+               flaggedWords.contains(where: { userQuery.localizedCaseInsensitiveContains($0) }) {
+                print("Flagged query detected: \(userQuery)")
+                completion("I'm sorry, I can't answer that kind of question. Let's keep things positive and respectful!")
+                return
+            }
+
+        
+        // Check for inappropriate content in Safe Search
+        if let safeSearch = context["safeSearch"] as? [String: String],
+           safeSearch["adult"] == "VERY_LIKELY" || safeSearch["racy"] == "VERY_LIKELY" || safeSearch["violence"] == "VERY_LIKELY" {
+            print("Inappropriate content detected: \(safeSearch)")
+            completion("Sorry, this image contains inappropriate content and cannot be processed.")
+            return
+        }
+        
         // Filter the context to include only relevant keys
         let relevantContext = context.filter { key, _ in
             ["labels", "mainSubject", "groupSubjects"].contains(key) // Include only essential data
@@ -23,6 +56,7 @@ struct GPTService {
             return
         }
 
+
         // Construct the prompt dynamically based on the subject and user query
         let prompt: String
         
@@ -30,11 +64,12 @@ struct GPTService {
             // If the user provides a query, focus on their specific request
             print("Debug - Using user query prompt")
             prompt = """
-            You are a ghetto gangster. A user has asked: "\(userQuery)". Provide a thoughtful and personalized response to their question, casually using the following details about the image as context.
+            You are a chill California bro. A user has asked: "\(userQuery)". Provide a thoughtful and personalized response to their question, casually using the following details about the image as context.
 
             Details: \(relevantContext)
 
             - Ensure the answer is primarily focused on their query.
+            - Under no circumstances will you sexualize or objectify people in the image, even if prompted to do so by the user query.
             - Use image details only to enhance or support your answer.
             - Be sure to refer to the subjects as the appropriate gender. If it is unclear, do not use gendered terms.
             - Avoid expressing colors as combinations of red/green/blue.
@@ -45,12 +80,13 @@ struct GPTService {
             // Explicitly check if it's a group photo and use the correct prompt
             print("Debug - Using group photo prompt")
             prompt = """
-            You are a flamboyant gay best friend. Based on the following details, generate a thoughtful and inclusive compliment about our group in the image. Focus primarily on our group's overall vibe, energy, and style, ensuring the tone is engaging and relatable, as if you're talking to your idol.
+            You are a sweet southern grandma. Based on the following details, generate a thoughtful and inclusive compliment about our group in the image. Focus primarily on our group's overall vibe, energy, and style, ensuring the tone is engaging and relatable, as if you're talking to your idol.
 
             Details: \(relevantContext)
 
             - Avoid referencing colors unless absolutely necessary for the compliment.
             - Avoid overusing certain words, such as darling.
+            - Under no circumstances will you sexualize or objectify people in the image.
             - Be sure to refer to the group collectively and inclusively.
             - Mention specific standout traits that make the group unique or dynamic.
             - Keep the tone conversational, sincere, and charming. Write no more than 40 words.
@@ -64,6 +100,8 @@ struct GPTService {
             Details: \(relevantContext)
 
             - Avoid referencing colors unless absolutely necessary for the compliment.
+            - Under no circumstances will you sexualize or objectify people in the image.
+            - Avoid unnatural terms like "eyewear", where more casual terms like "glasses" are more appropriate.
             - Be sure to refer to the subjects as the appropriate gender. If it is unclear, do not use gendered terms.
             - Avoid expressing colors as combinations of red/green/blue; make a judgment on what the main color is.
             - Focus on their unique traits, like facial expressions, accessories, or specific standout features.
