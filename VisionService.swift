@@ -234,4 +234,3 @@ struct VisionService {
         return "gray"
     }
 }
-

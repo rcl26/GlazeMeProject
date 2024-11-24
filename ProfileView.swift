@@ -1,11 +1,11 @@
 import SwiftUI
+import FirebaseAuth
 
 struct ProfileView: View {
-    // Placeholder user data (to be replaced with real data)
-    @State private var userName: String = "John Doe"
-    @State private var userEmail: String = "john.doe@example.com"
+    // User data fetched from FirebaseAuth
+    @State private var userName: String = "Loading..."
+    @State private var userEmail: String = "Loading..."
     @State private var profileImage: UIImage? = nil
-    @State private var userPlan: String = "Free Trial"  // Added user plan
 
     var body: some View {
         VStack(spacing: 30) {
@@ -52,44 +52,43 @@ struct ProfileView: View {
                 .frame(width: 300)
                 .background(Color.blue)
 
-            // User Plan (instead of free uses)
-            VStack {
-                Text("Current Plan")
-                    .font(.custom("Lemonada-Regular", size: 18))
-                    .foregroundColor(.black)
-                Text("\(userPlan)")  // Display user's current plan
-                    .font(.custom("Lemonada-Bold", size: 24))
-                    .foregroundColor(userPlan == "Free Trial" ? .green : .blue)
-            }
-
-            // Subscription Prompt for Free Plan
-            if userPlan == "Free Trial" {
-                VStack(spacing: 10) {
-                    Text("Your free trial is active!")
-                        .font(.custom("Lemonada-Regular", size: 18))
-                        .foregroundColor(.black)
-                        .multilineTextAlignment(.center)
-                        .padding(.horizontal, 20)
-
-                    Button(action: {
-                        // Add subscription flow here
-                        userPlan = "Premium"  // Example: Changing the plan to Premium
-                    }) {
-                        Text("Subscribe Now")
-                            .font(.custom("Lemonada-Bold", size: 20))
-                            .foregroundColor(.white)
-                            .padding()
-                            .background(Color.blue)
-                            .cornerRadius(10)
-                    }
-                }
-                .padding(.top, 20)
-            }
-
             Spacer()
+
+            // Log Out Button
+            Button(action: logOut) {
+                Text("Log Out")
+                    .font(.custom("Lemonada-Bold", size: 18))
+                    .foregroundColor(.white)
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                    .background(Color.red)
+                    .cornerRadius(10)
+                    .padding(.horizontal, 20)
+            }
+        }
+        .onAppear {
+            fetchUserData() // Fetch user details on appear
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.white.ignoresSafeArea())
+    }
+
+    // Fetch user data from FirebaseAuth
+    private func fetchUserData() {
+        if let user = Auth.auth().currentUser {
+            userEmail = user.email ?? "No Email"
+            userName = user.displayName ?? "No Name" // Will default to email if no display name is set
+        }
+    }
+
+    // Log Out Logic
+    private func logOut() {
+        do {
+            try Auth.auth().signOut()
+            print("User logged out successfully.")
+        } catch let error {
+            print("Failed to log out: \(error.localizedDescription)")
+        }
     }
 }
 

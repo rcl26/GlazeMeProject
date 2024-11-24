@@ -10,8 +10,7 @@ struct GlazeMeProjectApp: App {
 
     var body: some Scene {
         WindowGroup {
-            // Start with the LoginView
-            LoginView()
+            LoginView() // Start with LoginView
         }
     }
 }

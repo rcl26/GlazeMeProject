@@ -16,6 +16,8 @@ struct ContentView: View {
     @State private var gptResponse: String = ""
     @State private var isModalPresented: Bool = false
     @State private var imageDetails: String = "" // Holds Vision API data
+    @State private var isPaywallPresented: Bool = false
+
     
 
 
@@ -88,6 +90,13 @@ struct ContentView: View {
                     ZStack {
                         // Glaze Me Button
                         Button(action: {
+                            if UserDefaults.standard.bool(forKey: "hasTappedGlazeMe") == false {
+                                // Show paywall for first-time users
+                                isPaywallPresented = true
+                                return
+                            }
+
+                            // Existing functionality
                             isLoading = true
                             if let selectedImage = selectedImage, let imageData = selectedImage.jpegData(compressionQuality: 0.8) {
                                 VisionService.analyzeImage(with: imageData, apiKey: Config.googleVisionAPIKey) { structuredData in
@@ -104,8 +113,6 @@ struct ContentView: View {
                                             print("Error detected in structured data: \(error)") // Debug log
                                             return // Stop further processing
                                         }
-
-
 
                                         // Check for no human in the image
                                         if structuredData["noHuman"] as? Bool == true {
@@ -157,11 +164,6 @@ struct ContentView: View {
                                     }
                                 }
                             }
-
-
-
-
-                            
                         }) {
                             Text("Glaze me")
                                 .font(.custom("Lemonada-Bold", size: 24))
@@ -172,6 +174,13 @@ struct ContentView: View {
                         }
                         .offset(x: 0, y: -90)
                         .opacity(isLoading ? 0 : 1) // Hide button when loading
+                        .sheet(isPresented: $isPaywallPresented) {
+                            PaywallView(onSubscribe: {
+                                // Handle subscription here
+                                UserDefaults.standard.set(true, forKey: "hasTappedGlazeMe") // Mark as paid
+                                isPaywallPresented = false // Dismiss paywall
+                            })
+                        }
 
                         // Loading Animation
                         if isLoading {
@@ -185,6 +194,7 @@ struct ContentView: View {
                             }
                             .padding(.top, -120)
                         }
+
                     }
                 }
 

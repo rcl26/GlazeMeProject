@@ -1,19 +1,18 @@
 import SwiftUI
 import FirebaseAuth
 
-struct LoginView: View {
+struct SignUpView: View {
     @State private var email: String = ""
     @State private var password: String = ""
     @State private var errorMessage: String = ""
-    @State private var showSignUp: Bool = false // Toggle to switch to SignUpView
-    @State private var isLoggedIn: Bool = false // Toggle to navigate after login
+    @Environment(\.presentationMode) var presentationMode // To dismiss the view
 
     var body: some View {
         VStack {
             Spacer()
 
             // Title Text
-            Text("Welcome to Glaze Me")
+            Text("Create an Account")
                 .font(.custom("Lemonada-Bold", size: 30))
                 .foregroundColor(.white)
                 .padding(.bottom, 50)
@@ -35,9 +34,9 @@ struct LoginView: View {
                 .foregroundColor(.white)
                 .padding(.horizontal)
 
-            // Log In Button
-            Button(action: logIn) {
-                Text("Log In")
+            // Sign Up Button
+            Button(action: signUp) {
+                Text("Sign Up")
                     .font(.custom("Lemonada-Bold", size: 20))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
@@ -59,9 +58,9 @@ struct LoginView: View {
 
             Spacer()
 
-            // Sign Up Option
-            Button(action: { showSignUp = true }) {
-                Text("Don't have an account? Sign Up")
+            // Back to Login
+            Button(action: { presentationMode.wrappedValue.dismiss() }) {
+                Text("Already have an account? Log In")
                     .foregroundColor(.white)
                     .underline()
             }
@@ -75,28 +74,22 @@ struct LoginView: View {
             )
         )
         .ignoresSafeArea()
-        .fullScreenCover(isPresented: $showSignUp) {
-            SignUpView()
-        }
-        .fullScreenCover(isPresented: $isLoggedIn) {
-            ContentView() // Navigate to the main app after login
-        }
     }
 
-    // Firebase Log In Logic
-    private func logIn() {
+    // Firebase Sign Up Logic
+    private func signUp() {
         guard !email.isEmpty, !password.isEmpty else {
             errorMessage = "Please enter both email and password."
             return
         }
 
-        Auth.auth().signIn(withEmail: email, password: password) { result, error in
+        Auth.auth().createUser(withEmail: email, password: password) { result, error in
             if let error = error {
-                errorMessage = "Login failed: \(error.localizedDescription)"
+                errorMessage = "Sign-up failed: \(error.localizedDescription)"
                 return
             }
-            print("User logged in: \(result?.user.email ?? "No Email")")
-            isLoggedIn = true // Navigate after successful login
+            print("User signed up: \(result?.user.email ?? "No Email")")
+            presentationMode.wrappedValue.dismiss() // Go back to LoginView after sign up
         }
     }
 }

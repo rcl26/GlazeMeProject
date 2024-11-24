@@ -2,16 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>UIAppFonts</key>
-	<array>
-		<string>Lemonada-Bold.ttf</string>
-		<string>Lemonada-Light.ttf</string>
-		<string>Lemonada-Medium.ttf</string>
-		<string>Lemonada-Regular.ttf</string>
-		<string>Lemonada-SemiBold.ttf</string>
-	</array>
-	<key>GIDClientID</key>
-	<string>RLC.GlazeMeProject</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -21,6 +11,16 @@
 				<string>glazemeproject.rlc</string>
 			</array>
 		</dict>
+	</array>
+	<key>GIDClientID</key>
+	<string>RLC.GlazeMeAiProject</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>Lemonada-Bold.ttf</string>
+		<string>Lemonada-Light.ttf</string>
+		<string>Lemonada-Medium.ttf</string>
+		<string>Lemonada-Regular.ttf</string>
+		<string>Lemonada-SemiBold.ttf</string>
 	</array>
 </dict>
 </plist>
