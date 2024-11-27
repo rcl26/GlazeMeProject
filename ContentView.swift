@@ -17,6 +17,10 @@ struct ContentView: View {
     @State private var isModalPresented: Bool = false
     @State private var imageDetails: String = "" // Holds Vision API data
     @State private var isPaywallPresented: Bool = false
+    @State private var captionSafe: String = "" // Holds the "Safe" response
+    @State private var captionMedium: String = "" // Holds the "Medium" response
+    @State private var captionBold: String = "" // Holds the "Bold" response
+
 
     
 
@@ -64,7 +68,7 @@ struct ContentView: View {
 
                 // Comment Input Field
                 if gptResponse.isEmpty {
-                    TextField("Hey GlazeAi, how do I look in this?", text: $commentText)
+                    TextField("Make a caption about...", text: $commentText)
                         .padding(.leading, 25)
                         .padding(.vertical, 20)
                         .background(Color.blue.opacity(2.0))
@@ -115,14 +119,9 @@ struct ContentView: View {
                                         }
 
                                         // Check for no human in the image
-                                        if structuredData["noHuman"] as? Bool == true {
-                                            DispatchQueue.main.async {
-                                                isLoading = false
-                                                gptResponse = "Hmm, I don't see anyone in this picture. Try uploading a photo with people!"
-                                                isModalPresented = true
-                                            }
-                                            return
-                                        }
+                                        // Allow all images (with or without humans) to proceed
+                                        print("No humans detected, but proceeding to generate captions.")
+
 
                                         // Check if there's a clear main subject
                                         let faceCount = (structuredData["facialExpressions"] as? [String: Any])?["count"] as? Int ?? 0
@@ -146,16 +145,25 @@ struct ContentView: View {
                                             commentText: commentText
                                         ) { response in
                                             DispatchQueue.main.async {
-                                                isLoading = false
-                                                if let response = response {
-                                                    self.gptResponse = response
-                                                    uploadedItems.append(UploadedItem(image: selectedImage, response: response))
-                                                    isModalPresented = true
+                                                self.isLoading = false
+                                                if let captions = response {
+                                                    // Safely update captions
+                                                    self.captionSafe = captions["safe"] ?? "Safe caption missing"
+                                                    self.captionMedium = captions["medium"] ?? "Medium caption missing"
+                                                    self.captionBold = captions["bold"] ?? "Bold caption missing"
+                                                    self.isModalPresented = true
                                                 } else {
+                                                    // Handle failure
+                                                    self.captionSafe = "Safe caption missing"
+                                                    self.captionMedium = "Medium caption missing"
+                                                    self.captionBold = "Bold caption missing"
                                                     self.gptResponse = "Failed to generate a response."
+                                                    self.isModalPresented = true
                                                 }
                                             }
                                         }
+
+
                                     } else {
                                         DispatchQueue.main.async {
                                             isLoading = false
@@ -165,9 +173,9 @@ struct ContentView: View {
                                 }
                             }
                         }) {
-                            Text("Glaze me")
+                            Text("Caption this")
                                 .font(.custom("Lemonada-Bold", size: 24))
-                                .frame(width: 200, height: 75)
+                                .frame(width: 250, height: 75)
                                 .background(Color.yellow)
                                 .foregroundColor(.white)
                                 .cornerRadius(100)
@@ -185,7 +193,7 @@ struct ContentView: View {
                         // Loading Animation
                         if isLoading {
                             VStack(spacing: 10) {
-                                Text("Preparing to glaze")
+                                Text("Preparing")
                                     .font(.custom("Lemonada-Bold", size: 20))
                                     .foregroundColor(Color.yellow)
                                 ProgressView()
@@ -205,56 +213,112 @@ struct ContentView: View {
             .background(LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.9), Color.blue]), startPoint: .top, endPoint: .bottom))
             .ignoresSafeArea()
             .sheet(isPresented: $isModalPresented) {
-                VStack {
-                    // Display the uploaded image
-                    if let selectedImage = selectedImage {
-                        Image(uiImage: selectedImage)
-                            .resizable()
-                            .scaledToFill()
-                            .frame(width: 150, height: 150)
-                            .clipShape(Circle())
-                            .padding(.top, 20)
+                GeometryReader { geometry in
+                    ScrollView {
+                        VStack(spacing: 20) {
+                            // Display the uploaded image
+                            if let selectedImage = selectedImage {
+                                Image(uiImage: selectedImage)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 150, height: 150)
+                                    .clipShape(Circle())
+                                    .padding(.top, 20)
+                            }
+
+                            // Safe Caption Section
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Safe")
+                                    .font(.custom("Lemonada-Bold", size: 14))
+                                    .foregroundColor(Color.yellow)
+                                    .padding(.leading, 10)
+
+                                Text(captionSafe)
+                                    .font(.custom("Lemonada-Regular", size: 20))
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(Color.blue.opacity(0.8))
+                                    .cornerRadius(10)
+                                    .multilineTextAlignment(.leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(.horizontal, 20)
+
+                            // Medium Caption Section
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Medium")
+                                    .font(.custom("Lemonada-Bold", size: 14))
+                                    .foregroundColor(Color.yellow)
+                                    .padding(.leading, 10)
+
+                                Text(captionMedium)
+                                    .font(.custom("Lemonada-Regular", size: 20))
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(Color.blue.opacity(0.8))
+                                    .cornerRadius(10)
+                                    .multilineTextAlignment(.leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(.horizontal, 20)
+
+                            // Bold Caption Section
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Bold")
+                                    .font(.custom("Lemonada-Bold", size: 14))
+                                    .foregroundColor(Color.yellow)
+                                    .padding(.leading, 10)
+
+                                Text(captionBold)
+                                    .font(.custom("Lemonada-Regular", size: 20))
+                                    .foregroundColor(.white)
+                                    .padding()
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .background(Color.blue.opacity(0.8))
+                                    .cornerRadius(10)
+                                    .multilineTextAlignment(.leading)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .padding(.horizontal, 20)
+
+                            // Gold Close Button
+                            Button(action: {
+                                // Reset the app state
+                                isModalPresented = false
+                                selectedImage = nil
+                                gptResponse = ""
+                                commentText = ""
+                                captionSafe = ""
+                                captionMedium = ""
+                                captionBold = ""
+                            }) {
+                                Text("Close")
+                                    .font(.custom("Lemonada-Bold", size: 20))
+                                    .padding(.horizontal, 40)
+                                    .padding(.vertical, 15)
+                                    .background(Color.yellow)
+                                    .foregroundColor(.white)
+                                    .cornerRadius(25)
+                                    .overlay(
+                                        RoundedRectangle(cornerRadius: 25)
+                                            .stroke(Color.yellow, lineWidth: 2)
+                                    )
+                            }
+                            .padding(.top, 30)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .center) // Center content
+                        .padding(.bottom, 40) // Ensure space at the bottom
                     }
-
-                    // Display the GPT response
-                    Text(gptResponse)
-                        .font(.custom("Lemonada-Regular", size: 17))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 20)
-                        .padding(.vertical, 20)
-                        .background(Color.blue.opacity(0.8))
-                        .cornerRadius(15)
-                        .multilineTextAlignment(.center)
-                        .padding(.top, 20)
-
-                    // Gold Close Button
-                    Button(action: {
-                        // Reset the app state
-                        isModalPresented = false
-                        selectedImage = nil
-                        gptResponse = ""
-                        commentText = ""
-                    }) {
-                        Text("Close")
-                            .font(.custom("Lemonada-Bold", size: 20))
-                            .padding(.horizontal, 40)
-                            .padding(.vertical, 15)
-                            .background(Color.yellow)
-                            .foregroundColor(.white)
-                            .cornerRadius(25)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 25)
-                                    .stroke(Color.yellow, lineWidth: 2)
-                            )
-                    }
-                    .padding(.top, 30)
-
-                    Spacer()
+                    .frame(height: geometry.size.height) // Limit height to fit screen
+                    .background(LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.9), Color.blue]), startPoint: .top, endPoint: .bottom))
+                    .ignoresSafeArea()
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                .background(LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.9), Color.blue]), startPoint: .top, endPoint: .bottom))
-                .ignoresSafeArea()
             }
+
+
+
 
 
             .tabItem {
