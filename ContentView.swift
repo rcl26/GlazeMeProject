@@ -20,12 +20,13 @@ struct ContentView: View {
     @State private var captionSafe: String = "" // Holds the "Safe" response
     @State private var captionMedium: String = "" // Holds the "Medium" response
     @State private var captionBold: String = "" // Holds the "Bold" response
+    @State private var animateCircle: Bool = false
+    @State private var isGeneratingViewPresented: Bool = false
+
+
 
 
     
-
-
-
     var body: some View {
         TabView {
             // Upload View
@@ -47,7 +48,9 @@ struct ContentView: View {
                         Circle()
                             .fill(Color.white.opacity(0.2))
                             .frame(width: 300, height: 300)
-
+                            .scaleEffect(animateCircle ? 1.05 : 1.0) // Pulsing animation
+                            .animation(animateCircle ? Animation.easeInOut(duration: 1.5).repeatForever() : .default, value: animateCircle)
+                        
                         if let selectedImage = selectedImage {
                             Image(uiImage: selectedImage)
                                 .resizable()
@@ -62,9 +65,22 @@ struct ContentView: View {
                         }
                     }
                 }
-                .sheet(isPresented: $isImagePickerPresented) {
+                .sheet(isPresented: $isImagePickerPresented, onDismiss: {
+                    // Stop the pulse if an image is uploaded
+                    animateCircle = selectedImage == nil
+                }) {
                     ImagePicker(selectedImage: $selectedImage)
                 }
+                .onAppear {
+                    // Start the pulse only if no image is uploaded
+                    animateCircle = selectedImage == nil
+                }
+                .onChange(of: selectedImage) {
+                    animateCircle = selectedImage == nil
+                }
+
+
+
 
                 // Comment Input Field
                 if gptResponse.isEmpty {
@@ -193,7 +209,7 @@ struct ContentView: View {
                         // Loading Animation
                         if isLoading {
                             VStack(spacing: 10) {
-                                Text("Preparing")
+                                Text("Generating")
                                     .font(.custom("Lemonada-Bold", size: 20))
                                     .foregroundColor(Color.yellow)
                                 ProgressView()
@@ -212,9 +228,13 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.9), Color.blue]), startPoint: .top, endPoint: .bottom))
             .ignoresSafeArea()
+            // Modal View
             .sheet(isPresented: $isModalPresented) {
-                GeometryReader { geometry in
-                    ScrollView {
+                if isLoading {
+                    // Show the loading transition view while generating captions
+                    GeneratingView()
+                } else {
+                    GeometryReader { geometry in
                         VStack(spacing: 20) {
                             // Display the uploaded image
                             if let selectedImage = selectedImage {
@@ -226,96 +246,140 @@ struct ContentView: View {
                                     .padding(.top, 20)
                             }
 
-                            // Safe Caption Section
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("Safe")
-                                    .font(.custom("Lemonada-Bold", size: 14))
-                                    .foregroundColor(Color.yellow)
-                                    .padding(.leading, 10)
+                            // Caption Sections
+                            VStack(spacing: 10) {
+                                VStack(alignment: .leading, spacing: 10) {
+                                    // Safe Caption Section
+                                    Text("Safe")
+                                        .font(.custom("Lemonada-Bold", size: 14))
+                                        .foregroundColor(Color.yellow)
+                                        .padding(.leading, 10)
 
-                                Text(captionSafe)
-                                    .font(.custom("Lemonada-Regular", size: 20))
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(Color.blue.opacity(0.8))
-                                    .cornerRadius(10)
-                                    .multilineTextAlignment(.leading)
-                                    .fixedSize(horizontal: false, vertical: true)
+                                    Text(captionSafe)
+                                        .font(.custom("Lemonada-Regular", size: 16))
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .background(Color.blue.opacity(0.8))
+                                        .cornerRadius(10)
+                                        .multilineTextAlignment(.leading)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+
+                                VStack(alignment: .leading, spacing: 10) {
+                                    // Neutral Caption Section
+                                    Text("Neutral")
+                                        .font(.custom("Lemonada-Bold", size: 14))
+                                        .foregroundColor(Color.yellow)
+                                        .padding(.leading, 10)
+
+                                    Text(captionMedium)
+                                        .font(.custom("Lemonada-Regular", size: 16))
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .background(Color.blue.opacity(0.8))
+                                        .cornerRadius(10)
+                                        .multilineTextAlignment(.leading)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+
+                                VStack(alignment: .leading, spacing: 10) {
+                                    // Bold Caption Section
+                                    Text("Bold")
+                                        .font(.custom("Lemonada-Bold", size: 14))
+                                        .foregroundColor(Color.yellow)
+                                        .padding(.leading, 10)
+
+                                    Text(captionBold)
+                                        .font(.custom("Lemonada-Regular", size: 16))
+                                        .foregroundColor(.white)
+                                        .padding()
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .background(Color.blue.opacity(0.8))
+                                        .cornerRadius(10)
+                                        .multilineTextAlignment(.leading)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
                             }
                             .padding(.horizontal, 20)
 
-                            // Medium Caption Section
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("Medium")
-                                    .font(.custom("Lemonada-Bold", size: 14))
-                                    .foregroundColor(Color.yellow)
-                                    .padding(.leading, 10)
+                            Spacer()
 
-                                Text(captionMedium)
-                                    .font(.custom("Lemonada-Regular", size: 20))
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(Color.blue.opacity(0.8))
-                                    .cornerRadius(10)
-                                    .multilineTextAlignment(.leading)
-                                    .fixedSize(horizontal: false, vertical: true)
+                            // Buttons
+                            HStack(spacing: 20) {
+                                // Close Button
+                                Button(action: {
+                                    // Close Modal Functionality
+                                    isModalPresented = false
+                                    selectedImage = nil
+                                    gptResponse = ""
+                                    commentText = ""
+                                    captionSafe = ""
+                                    captionMedium = ""
+                                    captionBold = ""
+                                }) {
+                                    Text("Close")
+                                        .font(.custom("Lemonada-Bold", size: 15))
+                                        .padding(.horizontal, 30)
+                                        .padding(.vertical, 15)
+                                        .background(Color.yellow.opacity(0.7)) // Softer yellow
+                                        .foregroundColor(.white)
+                                        .cornerRadius(25)
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 25)
+                                                .stroke(Color.yellow.opacity(0.7), lineWidth: 2)
+                                        )
+                                }
+
+                                // Try Again Button
+                                Button(action: {
+                                    isLoading = true // Show the loading screen
+                                    if let selectedImage = selectedImage, let imageData = selectedImage.jpegData(compressionQuality: 0.8) {
+                                        VisionService.analyzeImage(with: imageData, apiKey: Config.googleVisionAPIKey) { structuredData in
+                                            if let structuredData = structuredData {
+                                                GPTService.getGPTResponse(
+                                                    subject: "subject",
+                                                    context: structuredData,
+                                                    isGroupPhoto: false,
+                                                    commentText: commentText
+                                                ) { newCaptions in
+                                                    DispatchQueue.main.async {
+                                                        isLoading = false // Hide the loading screen
+                                                        if let newCaptions = newCaptions {
+                                                            // Update captions with new responses
+                                                            captionSafe = newCaptions["safe"] ?? "Safe caption missing"
+                                                            captionMedium = newCaptions["medium"] ?? "Neutral caption missing"
+                                                            captionBold = newCaptions["bold"] ?? "Bold caption missing"
+                                                        }
+                                                    }
+                                                }
+                                            } else {
+                                                DispatchQueue.main.async {
+                                                    isLoading = false // Hide the loading screen
+                                                }
+                                            }
+                                        }
+                                    }
+                                }) {
+                                    Text("Try Again")
+                                        .font(.custom("Lemonada-Bold", size: 15))
+                                        .padding(.horizontal, 30)
+                                        .padding(.vertical, 15)
+                                        .background(Color.yellow)
+                                        .foregroundColor(.white)
+                                        .cornerRadius(25)
+                                }
                             }
-                            .padding(.horizontal, 20)
-
-                            // Bold Caption Section
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text("Bold")
-                                    .font(.custom("Lemonada-Bold", size: 14))
-                                    .foregroundColor(Color.yellow)
-                                    .padding(.leading, 10)
-
-                                Text(captionBold)
-                                    .font(.custom("Lemonada-Regular", size: 20))
-                                    .foregroundColor(.white)
-                                    .padding()
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .background(Color.blue.opacity(0.8))
-                                    .cornerRadius(10)
-                                    .multilineTextAlignment(.leading)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            .padding(.horizontal, 20)
-
-                            // Gold Close Button
-                            Button(action: {
-                                // Reset the app state
-                                isModalPresented = false
-                                selectedImage = nil
-                                gptResponse = ""
-                                commentText = ""
-                                captionSafe = ""
-                                captionMedium = ""
-                                captionBold = ""
-                            }) {
-                                Text("Close")
-                                    .font(.custom("Lemonada-Bold", size: 20))
-                                    .padding(.horizontal, 40)
-                                    .padding(.vertical, 15)
-                                    .background(Color.yellow)
-                                    .foregroundColor(.white)
-                                    .cornerRadius(25)
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: 25)
-                                            .stroke(Color.yellow, lineWidth: 2)
-                                    )
-                            }
-                            .padding(.top, 30)
+                            .padding(.bottom, 50) // Adjust bottom padding for better spacing
                         }
-                        .frame(maxWidth: .infinity, alignment: .center) // Center content
-                        .padding(.bottom, 40) // Ensure space at the bottom
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .background(LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.9), Color.blue]), startPoint: .top, endPoint: .bottom))
+                        .ignoresSafeArea()
                     }
-                    .frame(height: geometry.size.height) // Limit height to fit screen
-                    .background(LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.9), Color.blue]), startPoint: .top, endPoint: .bottom))
-                    .ignoresSafeArea()
                 }
             }
+
 
 
 
