@@ -18,32 +18,36 @@ struct SplashView: View {
             VStack(spacing: 40) {
                 Spacer()
 
-                // Logo: Two "C"s for "Cap Call"
+                // Redesigned Logo
                 ZStack {
-                    Circle()
-                        .fill(Color.yellow.opacity(0.9)) // Yellow circle for logo
-                        .frame(width: 200, height: 200)
-                        .scaleEffect(animate ? 1.05 : 1.0)
+                    // Abstract layered shapes for the logo
+                    RoundedRectangle(cornerRadius: 25)
+                        .fill(Color.yellow.opacity(0.9))
+                        .frame(width: 240, height: 240)
+                        .rotationEffect(.degrees(animate ? 15 : -15))
                         .animation(Animation.easeInOut(duration: 1.5).repeatForever(), value: animate)
 
-                    Text("C C")
-                        .font(.custom("Lemonada-Bold", size: 64))
-                        .foregroundColor(.white)
+                    RoundedRectangle(cornerRadius: 15)
+                        .fill(Color.white.opacity(0.8))
+                        .frame(width: 200, height: 200)
+                        .rotationEffect(.degrees(animate ? -15 : 15))
+                        .animation(Animation.easeInOut(duration: 1.5).repeatForever(), value: animate)
+
+                    // Bold, modern text inside the logo with line break
+                    Text("Cap\nCall")
+                        .font(.custom("Lemonada-Bold", size: 42)) // Adjust size to fit inside the logo
+                        .foregroundColor(.blue)
+                        .multilineTextAlignment(.center) // Center align text inside the logo
                 }
                 .onAppear {
                     animate = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + (skipToMain ? 3 : 3)) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + (skipToMain ? 5 : 3)) {
                         navigateToNextView = true
                     }
                 }
 
-                // App Name
-                Text("Cap Call")
-                    .font(.custom("Lemonada-Bold", size: 32))
-                    .foregroundColor(.white)
-
                 // Subtitle
-                Text("Capture the moment, call the caption.")
+                Text("You capture the moment, we call the caption.")
                     .font(.custom("Lemonada-Regular", size: 16))
                     .foregroundColor(.white.opacity(0.8))
                     .multilineTextAlignment(.center)

@@ -22,6 +22,9 @@ struct ContentView: View {
     @State private var captionBold: String = "" // Holds the "Bold" response
     @State private var animateCircle: Bool = false
     @State private var isGeneratingViewPresented: Bool = false
+    @State private var safeSearchErrorMessage: String = ""
+    @State private var isSafeSearchErrorPresented: Bool = false
+
 
 
 
@@ -127,8 +130,8 @@ struct ContentView: View {
                                         if let error = structuredData["error"] as? String {
                                             DispatchQueue.main.async {
                                                 isLoading = false
-                                                gptResponse = error // Use the error message from structured data
-                                                isModalPresented = true
+                                                safeSearchErrorMessage = "The image contains inappropriate content and cannot be processed."
+                                                isSafeSearchErrorPresented = true
                                             }
                                             print("Error detected in structured data: \(error)") // Debug log
                                             return // Stop further processing
@@ -228,6 +231,39 @@ struct ContentView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(LinearGradient(gradient: Gradient(colors: [Color.blue.opacity(0.9), Color.blue]), startPoint: .top, endPoint: .bottom))
             .ignoresSafeArea()
+            
+            
+            .sheet(isPresented: $isSafeSearchErrorPresented) {
+                VStack(spacing: 20) {
+                    Text("Content Blocked")
+                        .font(.custom("Lemonada-Bold", size: 24))
+                        .foregroundColor(.red)
+                        .padding()
+
+                    Text(safeSearchErrorMessage)
+                        .font(.custom("Lemonada-Regular", size: 16))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        .padding()
+
+                    Button(action: {
+                        isSafeSearchErrorPresented = false
+                    }) {
+                        Text("OK")
+                            .font(.custom("Lemonada-Bold", size: 16))
+                            .padding(.horizontal, 30)
+                            .padding(.vertical, 15)
+                            .background(Color.red)
+                            .foregroundColor(.white)
+                            .cornerRadius(25)
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(LinearGradient(gradient: Gradient(colors: [Color.black.opacity(0.8), Color.black]), startPoint: .top, endPoint: .bottom))
+                .ignoresSafeArea()
+            }
+
+            
             // Modal View
             .sheet(isPresented: $isModalPresented) {
                 if isLoading {
@@ -323,12 +359,12 @@ struct ContentView: View {
                                         .font(.custom("Lemonada-Bold", size: 15))
                                         .padding(.horizontal, 30)
                                         .padding(.vertical, 15)
-                                        .background(Color.yellow.opacity(0.7)) // Softer yellow
+                                        .background(Color.red.opacity(0.5)) // Softer yellow
                                         .foregroundColor(.white)
                                         .cornerRadius(25)
                                         .overlay(
                                             RoundedRectangle(cornerRadius: 25)
-                                                .stroke(Color.yellow.opacity(0.7), lineWidth: 2)
+                                                .stroke(Color.red.opacity(0.3), lineWidth: 2)
                                         )
                                 }
 
@@ -366,7 +402,7 @@ struct ContentView: View {
                                         .font(.custom("Lemonada-Bold", size: 15))
                                         .padding(.horizontal, 30)
                                         .padding(.vertical, 15)
-                                        .background(Color.yellow)
+                                        .background(Color.yellow.opacity(0.8))
                                         .foregroundColor(.white)
                                         .cornerRadius(25)
                                 }

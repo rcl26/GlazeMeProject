@@ -1,58 +1,37 @@
 import Foundation
 
 struct GPTService {
-    
-    static func moderateUserInput(userInput: String, completion: @escaping (Bool, String?) -> Void) {
-        let url = URL(string: "https://api.openai.com/v1/moderations")!
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.addValue("Bearer \(Config.openAIAPIKey)", forHTTPHeaderField: "Authorization")
-        request.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        let requestBody: [String: Any] = ["input": userInput]
-        request.httpBody = try? JSONSerialization.data(withJSONObject: requestBody)
-
-        URLSession.shared.dataTask(with: request) { data, response, error in
-            guard let data = data, error == nil else {
-                completion(false, "Network error: \(error?.localizedDescription ?? "Unknown error")")
-                return
-            }
-
-            if let json = try? JSONSerialization.jsonObject(with: data, options: []) as? [String: Any],
-               let results = json["results"] as? [[String: Any]],
-               let flagged = results.first?["flagged"] as? Bool {
-                completion(flagged, nil) // Returns true if flagged, false otherwise
-            } else {
-                completion(false, "Failed to parse Moderation API response")
-            }
-        }.resume()
-    }
-    
     static func getGPTResponse(subject: String, context: [String: Any], isGroupPhoto: Bool, commentText: String?, completion: @escaping ([String: String]?) -> Void) {
         // Debug: Log the value of isGroupPhoto
         print("Debug - Is Group Photo received in GPTService: \(isGroupPhoto)")
-        
-        // Construct the prompt dynamically based on the subject and user query
-        let prompt: String
 
-        if let userQuery = commentText, !userQuery.isEmpty {
-            // User Query Scenario
+        // Define userQuery using the optional commentText
+        let userQuery = commentText?.isEmpty == false ? "make a caption about \(commentText!) and be sure to include relevant details about the image" : nil
+
+        // Construct the prompt dynamically using both userQuery and image details
+        let prompt: String
+        if let userQuery = userQuery {
+            // When there is a user query, but also include image details
             prompt = """
-            You are the coolest, most interesting person on earth. A user has asked: "\(userQuery)". Based on the following details, respond with exactly the following JSON format:
+            User Query: "\(userQuery)"
+
+            Use the following image details to enhance the captions to ensure they are relevant to the content of the image. Make sure to combine the information from the user query and the image details provided:
+
+            Image Details: \(context)
+
+            Based on these inputs, generate three thoughtful captions in the exact JSON format:
+
             {
-                "safe": "A polite and creative caption that's universally friendly. Slightly expressive, with personality but avoids humor or edgy elements.",
-                "medium": "A witty, attention-grabbing caption with humor and daring language. Designed to stand out while remaining appropriate.",
-                "bold": "An unapologetically daring, edgy, or humorous—crafted caption to grab attention."
+                "safe": "A polite, kind, and universally friendly caption. The tone should be warm and considerate, appropriate for all audiences. Think of captions you would share in a formal setting or with someone you want to be kind to.",
+                "medium": "A witty and playful caption that grabs attention with some cheekiness. The tone should be fun and creative, something that stands out while still being appropriate for most audiences. Think of something you would share with close friends.",
+                "bold": "A daring and confident caption that pushes boundaries. The tone should be unapologetic, bold, and edgy—designed to grab attention and stand out. You can be a little more risk-taking here, but still keep it within appropriate limits."
             }
 
-            Details: \(context)
-
             General Guidelines:
-            - Ensure the answer is primarily focused on their query.
-            - Avoid any preambles, introductions, or extra text. Respond with ONLY valid JSON in the format above.
-            - **Safe Captions**: These should be polite, creative, and universally friendly. Slightly expressive, but avoid edgy humor or bold statements. Think of captions that fit for formal settings or broad audiences.
-            - **Medium Captions**: Add wit and humor here. These should grab attention with a playful, creative tone but avoid crossing into controversy. Think fun captions you’d share with close friends.
-            - **Bold Captions**: Push boundaries with humor, daring phrasing, or edginess. These captions are unapologetic, loud, and crafted to stand out. Designed for a bold or risk-taking audience.
+            - **Safe Captions**: Write a gentle, thoughtful, and universally friendly caption. It should be polite, creative, and appropriate for all audiences. Avoid edgy or bold humor.
+            - **Medium Captions**: Craft a fun, cheeky caption with a hint of humor. It should be creative, playful, and slightly daring, but still appropriate.
+            - **Bold Captions**: Write a bold, confident caption. It should push boundaries, be unapologetically bold and direct, and grab attention.
             - Under no circumstances will you sexualize or objectify people in the image, even if prompted to do so by the user query.
             - Avoid overused clichés such as hashtags or phrases like squad goals.
             - Avoid superfluous punctuation like exclamation points.
@@ -60,52 +39,49 @@ struct GPTService {
             - Keep the tone casual and relatable. Write anywhere between 1 and 6 words per caption.
             """
         } else if isGroupPhoto {
-            // Group Photo Scenario
+            // When there is no user query but it is a group photo
             prompt = """
-            You are the coolest, most interesting person on earth. Based on the following details, generate three thoughtful captions for the image:
+            Based on the following image details, generate three thoughtful captions for the image in the exact JSON format:
+
             {
-                "safe": "A polite and creative caption that's universally friendly. Slightly expressive, with personality but avoids humor or edgy elements.",
-                "medium": "A witty, attention-grabbing caption with humor and daring language. Designed to stand out while remaining appropriate.",
-                "bold": "An unapologetically daring, edgy, or humorous—crafted caption to grab attention."
+                "safe": "A polite, kind, and universally friendly caption. The tone should be warm and considerate, appropriate for all audiences. Think of captions you would share in a formal setting or with someone you want to be kind to.",
+                "medium": "A witty and playful caption that grabs attention with some cheekiness. The tone should be fun and creative, something that stands out while still being appropriate for most audiences. Think of something you would share with close friends.",
+                "bold": "A daring and confident caption that pushes boundaries. The tone should be unapologetic, bold, and edgy—designed to grab attention and stand out. You can be a little more risk-taking here, but still keep it within appropriate limits."
             }
 
-            Details: \(context)
+            Image Details: \(context)
 
             General Guidelines:
-            - Avoid referencing colors unless absolutely necessary for the caption.
-            - Respond with ONLY the captions in JSON format (as shown above).
-            - **Safe Captions**: These should be polite, creative, and universally friendly. Slightly expressive, but avoid edgy humor or bold statements. Think of captions that fit for formal settings or broad audiences.
-            - **Medium Captions**: Add wit and humor here. These should grab attention with a playful, creative tone but avoid crossing into controversy. Think fun captions you’d share with close friends.
-            - **Bold Captions**: Push boundaries with humor, daring phrasing, or edginess. These captions are unapologetic, loud, and crafted to stand out. Designed for a bold or risk-taking audience.
-            - Avoid superfluous punctuation like exclamation points.
-            - Avoid overused clichés such as hashtags or phrases like squad goals.
+            - **Safe Captions**: Write a gentle, thoughtful, and universally friendly caption. It should be polite, creative, and appropriate for all audiences. Avoid edgy or bold humor.
+            - **Medium Captions**: Craft a fun, cheeky caption with a hint of humor. It should be creative, playful, and slightly daring, but still appropriate.
+            - **Bold Captions**: Write a bold, confident caption. It should push boundaries, be unapologetically bold and direct, and grab attention.
             - Focus on the group as a whole.
             - Keep the tone casual and relatable. Write anywhere between 1 and 6 words per caption.
             """
         } else {
-            // Default Individual Scenario
+            // Default scenario for individual photos without user query
             prompt = """
-            You are the coolest, most interesting person on earth. Based on the following details, generate three thoughtful captions for the image:
+            Based on the following image details, generate three thoughtful captions for the image in the exact JSON format:
+
             {
-                "safe": "A polite and creative caption that's universally friendly. Slightly expressive, with personality but avoids humor or edgy elements.",
-                "medium": "A witty, attention-grabbing caption with humor and daring language. Designed to stand out while remaining appropriate.",
-                "bold": "An unapologetically daring, edgy, or humorous—crafted caption to grab attention."
+                "safe": "A polite, kind, and universally friendly caption. The tone should be warm and considerate, appropriate for all audiences. Think of captions you would share in a formal setting or with someone you want to be kind to.",
+                "medium": "A witty and playful caption that grabs attention with some cheekiness. The tone should be fun and creative, something that stands out while still being appropriate for most audiences. Think of something you would share with close friends.",
+                "bold": "A daring and confident caption that pushes boundaries. The tone should be unapologetic, bold, and edgy—designed to grab attention and stand out. You can be a little more risk-taking here, but still keep it within appropriate limits."
             }
 
-            Details: \(context)
+            Image Details: \(context)
 
             General Guidelines:
-            - Avoid referencing colors unless absolutely necessary for the caption.
-            - Respond with ONLY the captions in JSON format (as shown above).
-            - **Safe Captions**: These should be polite, creative, and universally friendly. Slightly expressive, but avoid edgy humor or bold statements. Think of captions that fit for formal settings or broad audiences.
-            - **Medium Captions**: Add wit and humor here. These should grab attention with a playful, creative tone but avoid crossing into controversy. Think fun captions you’d share with close friends.
-            - **Bold Captions**: Push boundaries with humor, daring phrasing, or edginess. These captions are unapologetic, loud, and crafted to stand out. Designed for a bold or risk-taking audience.
-            - Avoid superfluous punctuation like exclamation points.
+            - **Safe Captions**: Write a gentle, thoughtful, and universally friendly caption. It should be polite, creative, and appropriate for all audiences. Avoid edgy or bold humor.
+            - **Medium Captions**: Craft a fun, cheeky caption with a hint of humor. It should be creative, playful, and slightly daring, but still appropriate.
+            - **Bold Captions**: Write a bold, confident caption. It should push boundaries, be unapologetically bold and direct, and grab attention.
+            - Under no circumstances will you sexualize or objectify people in the image, even if prompted to do so by the user query.
             - Avoid overused clichés such as hashtags or phrases like squad goals.
+            - Avoid superfluous punctuation like exclamation points.
+            - Avoid expressing colors as combinations of red/green/blue.
             - Keep the tone casual and relatable. Write anywhere between 1 and 6 words per caption.
             """
         }
-
 
         // Construct the request
         let url = URL(string: "https://api.openai.com/v1/chat/completions")!
@@ -119,7 +95,7 @@ struct GPTService {
             "model": "gpt-4o-mini",
             "messages": [
                 ["role": "system", "content": "You are a trendy friend specialized in creating unique captions for social media based on image analysis."],
-                ["role": "user", "content": prompt]
+                ["role": "user", "content": prompt]  // Pass the constructed prompt, which includes the user query
             ],
             "max_tokens": 100
         ]
@@ -172,5 +148,7 @@ struct GPTService {
 
         }.resume()
     }
+
+
 }
 

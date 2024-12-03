@@ -3,9 +3,12 @@ import FirebaseAuth
 
 struct ProfileView: View {
     // User data fetched from FirebaseAuth
-    @State private var userName: String = "Loading..."
     @State private var userEmail: String = "Loading..."
+    @State private var subscriptionPlan: String = "Free" // Default subscription plan
     @State private var profileImage: UIImage? = nil
+
+    // Binding to control modal dismissal
+    @Binding var isProfilePresented: Bool
 
     var body: some View {
         VStack(spacing: 30) {
@@ -37,15 +40,29 @@ struct ProfileView: View {
 
             // User Details
             VStack(alignment: .leading, spacing: 10) {
-                Text("Name: \(userName)")
+                Text("Email: \(userEmail)")
                     .font(.custom("Lemonada-Regular", size: 18))
                     .foregroundColor(.black)
-                Text("Email: \(userEmail)")
+                Text("Subscription Plan: \(subscriptionPlan)")
                     .font(.custom("Lemonada-Regular", size: 16))
                     .foregroundColor(.gray)
             }
             .frame(width: 300, alignment: .leading)
             .padding()
+
+            // Subscribe Now Button (Only for unsubscribed users)
+            if subscriptionPlan == "Free" {
+                Button(action: subscribeNow) {
+                    Text("Subscribe Now")
+                        .font(.custom("Lemonada-Bold", size: 18))
+                        .foregroundColor(.white)
+                        .padding()
+                        .frame(maxWidth: .infinity)
+                        .background(Color.green)
+                        .cornerRadius(10)
+                        .padding(.horizontal, 20)
+                }
+            }
 
             // Divider
             Divider()
@@ -54,17 +71,33 @@ struct ProfileView: View {
 
             Spacer()
 
-            // Log Out Button
-            Button(action: logOut) {
-                Text("Log Out")
-                    .font(.custom("Lemonada-Bold", size: 18))
-                    .foregroundColor(.white)
-                    .padding()
-                    .frame(maxWidth: .infinity)
-                    .background(Color.red)
-                    .cornerRadius(10)
-                    .padding(.horizontal, 20)
+            // Buttons (Close and Log Out)
+            HStack(spacing: 20) {
+                // Close Button
+                Button(action: {
+                    isProfilePresented = false // Dismiss the profile page
+                }) {
+                    Text("Close")
+                        .font(.custom("Lemonada-Bold", size: 16))
+                        .padding(.horizontal, 30)
+                        .padding(.vertical, 12)
+                        .background(Color.yellow)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                }
+
+                // Log Out Button
+                Button(action: logOut) {
+                    Text("Log Out")
+                        .font(.custom("Lemonada-Bold", size: 16))
+                        .padding(.horizontal, 30)
+                        .padding(.vertical, 12)
+                        .background(Color.red)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                }
             }
+            .padding(.horizontal, 20)
         }
         .onAppear {
             fetchUserData() // Fetch user details on appear
@@ -77,7 +110,7 @@ struct ProfileView: View {
     private func fetchUserData() {
         if let user = Auth.auth().currentUser {
             userEmail = user.email ?? "No Email"
-            userName = user.displayName ?? "No Name" // Will default to email if no display name is set
+            subscriptionPlan = UserDefaults.standard.string(forKey: "subscriptionPlan") ?? "Free"
         }
     }
 
@@ -89,6 +122,13 @@ struct ProfileView: View {
         } catch let error {
             print("Failed to log out: \(error.localizedDescription)")
         }
+    }
+
+    // Subscribe Now Logic
+    private func subscribeNow() {
+        UserDefaults.standard.set("Premium", forKey: "subscriptionPlan")
+        subscriptionPlan = "Premium" // Update the local state
+        print("Subscription updated to Premium.")
     }
 }
 

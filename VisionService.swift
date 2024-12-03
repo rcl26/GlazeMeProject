@@ -4,9 +4,20 @@ import UIKit
 struct VisionService {
     static func analyzeImage(with imageData: Data, apiKey: String, completion: @escaping (_ structuredData: [String: Any]?) -> Void) {
         // Extract image dimensions
-        let image = UIImage(data: imageData)
-        let imageWidth = image?.size.width ?? 1 // Default to 1 to avoid division by zero
-        let imageHeight = image?.size.height ?? 1
+        guard let image = UIImage(data: imageData) else {
+            print("Failed to decode image data")
+            completion(nil)
+            return
+        }
+        
+        let imageWidth = image.size.width
+        let imageHeight = image.size.height
+        
+        if imageWidth <= 0 || imageHeight <= 0 {
+            print("Invalid image dimensions: Width: \(imageWidth), Height: \(imageHeight)")
+            completion(nil)
+            return
+        }
 
         // Debug: Log image dimensions
         print("Image Dimensions - Width: \(imageWidth), Height: \(imageHeight)")
@@ -49,21 +60,24 @@ struct VisionService {
                    safeSearch["racy"] == "LIKELY" || safeSearch["racy"] == "VERY_LIKELY" {
                     print("Inappropriate content detected: \(safeSearch)")
                     structuredData["error"] = "Inappropriate content detected. Please upload a different image."
+                    completion(structuredData)
+                    return
                 }
 
                 // Check for human-related labels or objects
                 if let labels = structuredData["labels"] as? [String],
                    let objects = structuredData["objects"] as? [String],
                    !containsHuman(labels: labels, objects: objects) {
-                    print("No human detected in the image.")
-                    completion(["noHuman": true])
-                } else {
-                    // Debug: Print the structured data
-                    print("Debug - Final Structured Data Before Completion: \(structuredData)")
-
-                    // Pass structured data to the completion handler
-                    completion(structuredData)
+                    print("No human detected in the image, but proceeding with analysis.")
+                    structuredData["subject"] = labels.first ?? "image" // Use first label as the subject
                 }
+
+                // Debug: Print the structured data
+                print("Debug - Final Structured Data Before Completion: \(structuredData)")
+
+                // Pass structured data to the completion handler
+                completion(structuredData)
+
             } else {
                 print("Failed to parse response data.")
                 completion(nil)
@@ -139,6 +153,7 @@ struct VisionService {
     }
 
     private static func containsHuman(labels: [String], objects: [String]) -> Bool {
+        // Check if there are human-related keywords in labels or objects
         let humanKeywords = ["person", "face"]
         return labels.contains(where: { humanKeywords.contains($0.lowercased()) }) ||
                objects.contains(where: { humanKeywords.contains($0.lowercased()) })
@@ -175,7 +190,7 @@ struct VisionService {
         return [
             "count": filteredSubjects.count,
             "mainSubject": resolvedMainSubject ?? [:],
-            "groupSubjects": isGroupPhoto ? (filteredSubjects as [[String: Any]]? ?? []) : [],
+            "groupSubjects": isGroupPhoto ? filteredSubjects : [],
             "isGroupPhoto": isGroupPhoto
         ]
     }
@@ -234,3 +249,4 @@ struct VisionService {
         return "gray"
     }
 }
+

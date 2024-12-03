@@ -49,7 +49,7 @@ struct GalleryView: View {
                             .padding()
                         }
                     } else {
-                        Text("No images uploaded yet.")
+                        Text("Coming soon!")
                             .font(.custom("Lemonada-Regular", size: 20))
                             .foregroundColor(.white)
                             .padding()
@@ -79,7 +79,7 @@ struct GalleryView: View {
         }
         // Sheet for Profile View
         .sheet(isPresented: $showProfileView) {
-            ProfileView() // Profile View is now independent
+            ProfileView(isProfilePresented: $showProfileView) // Pass the binding
         }
     }
 }
