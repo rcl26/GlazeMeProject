@@ -9,14 +9,14 @@ struct PaywallView: View {
             Spacer()
 
             // Title
-            Text("Unlock Premium Features!")
+            Text("Your Captions Await!")
                 .font(.custom("Lemonada-Bold", size: 30))
                 .foregroundColor(.blue)
                 .multilineTextAlignment(.center)
                 .padding()
 
             // Description
-            Text("Gain unlimited access to AI-generated compliments and more by subscribing to our premium plan.")
+            Text("$1/month for unlimited access to AI-generated captions.")
                 .font(.custom("Lemonada-Regular", size: 18))
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
@@ -28,7 +28,7 @@ struct PaywallView: View {
             Button(action: {
                 onSubscribe() // Call the subscription action
             }) {
-                Text("Subscribe Now")
+                Text("Subscribe")
                     .font(.custom("Lemonada-Bold", size: 20))
                     .foregroundColor(.white)
                     .padding()

@@ -41,7 +41,7 @@ struct SplashView: View {
                 }
                 .onAppear {
                     animate = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + (skipToMain ? 5 : 3)) {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + (skipToMain ? 3 : 3)) {
                         navigateToNextView = true
                     }
                 }

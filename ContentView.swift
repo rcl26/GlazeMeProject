@@ -24,6 +24,9 @@ struct ContentView: View {
     @State private var isGeneratingViewPresented: Bool = false
     @State private var safeSearchErrorMessage: String = ""
     @State private var isSafeSearchErrorPresented: Bool = false
+    @State private var isProfilePresented: Bool = false
+    
+
 
 
 
@@ -111,22 +114,26 @@ struct ContentView: View {
                 // Glaze Me Button or Loading Animation
                 if let _ = selectedImage, gptResponse.isEmpty {
                     ZStack {
-                        // Glaze Me Button
+                        // Caption this Button
                         Button(action: {
-                            if UserDefaults.standard.bool(forKey: "hasTappedGlazeMe") == false {
-                                // Show paywall for first-time users
+                            // Check subscription status
+                            let isSubscribed = UserDefaults.standard.bool(forKey: "isSubscribed")
+                            print("Subscription Status:", isSubscribed)
+
+                            if !isSubscribed {
+                                // Trigger paywall for non-subscribed users
                                 isPaywallPresented = true
                                 return
                             }
 
-                            // Existing functionality
+                            // Proceed to caption generation for subscribed users
                             isLoading = true
                             if let selectedImage = selectedImage, let imageData = selectedImage.jpegData(compressionQuality: 0.8) {
                                 VisionService.analyzeImage(with: imageData, apiKey: Config.googleVisionAPIKey) { structuredData in
                                     if let structuredData = structuredData {
                                         print("Debug – Structured Data in Completion Block: \(structuredData)")
 
-                                        // Check Safe Search for inappropriate content
+                                        // Check for errors or process the response
                                         if let error = structuredData["error"] as? String {
                                             DispatchQueue.main.async {
                                                 isLoading = false
@@ -134,45 +141,24 @@ struct ContentView: View {
                                                 isSafeSearchErrorPresented = true
                                             }
                                             print("Error detected in structured data: \(error)") // Debug log
-                                            return // Stop further processing
+                                            return
                                         }
-
-                                        // Check for no human in the image
-                                        // Allow all images (with or without humans) to proceed
-                                        print("No humans detected, but proceeding to generate captions.")
-
-
-                                        // Check if there's a clear main subject
-                                        let faceCount = (structuredData["facialExpressions"] as? [String: Any])?["count"] as? Int ?? 0
-                                        let mainSubject = (structuredData["facialExpressions"] as? [String: Any])?["mainSubject"] as? [String: Any]
-
-                                        let subject: String
-                                        if faceCount > 1 && mainSubject == nil {
-                                            subject = "group"
-                                        } else {
-                                            subject = "person"
-                                        }
-
-                                        let isGroupPhotoValue = structuredData["isGroupPhoto"] as? Bool ?? false
-                                        print("Debug – Extracted isGroupPhotoValue in ContentView: \(isGroupPhotoValue)")
 
                                         // Pass valid data to GPT Service
                                         GPTService.getGPTResponse(
-                                            subject: subject,
+                                            subject: "subject",
                                             context: structuredData,
-                                            isGroupPhoto: isGroupPhotoValue,
+                                            isGroupPhoto: false,
                                             commentText: commentText
                                         ) { response in
                                             DispatchQueue.main.async {
                                                 self.isLoading = false
                                                 if let captions = response {
-                                                    // Safely update captions
                                                     self.captionSafe = captions["safe"] ?? "Safe caption missing"
                                                     self.captionMedium = captions["medium"] ?? "Medium caption missing"
                                                     self.captionBold = captions["bold"] ?? "Bold caption missing"
                                                     self.isModalPresented = true
                                                 } else {
-                                                    // Handle failure
                                                     self.captionSafe = "Safe caption missing"
                                                     self.captionMedium = "Medium caption missing"
                                                     self.captionBold = "Bold caption missing"
@@ -181,8 +167,6 @@ struct ContentView: View {
                                                 }
                                             }
                                         }
-
-
                                     } else {
                                         DispatchQueue.main.async {
                                             isLoading = false
@@ -203,11 +187,12 @@ struct ContentView: View {
                         .opacity(isLoading ? 0 : 1) // Hide button when loading
                         .sheet(isPresented: $isPaywallPresented) {
                             PaywallView(onSubscribe: {
-                                // Handle subscription here
-                                UserDefaults.standard.set(true, forKey: "hasTappedGlazeMe") // Mark as paid
+                                // Update subscription status in UserDefaults
+                                UserDefaults.standard.set(true, forKey: "isSubscribed")
                                 isPaywallPresented = false // Dismiss paywall
                             })
                         }
+
 
                         // Loading Animation
                         if isLoading {
@@ -288,7 +273,7 @@ struct ContentView: View {
                                     // Safe Caption Section
                                     Text("Safe")
                                         .font(.custom("Lemonada-Bold", size: 14))
-                                        .foregroundColor(Color.yellow)
+                                        .foregroundColor(Color.yellow.opacity(0.6))
                                         .padding(.leading, 10)
 
                                     Text(captionSafe)
@@ -306,7 +291,7 @@ struct ContentView: View {
                                     // Neutral Caption Section
                                     Text("Neutral")
                                         .font(.custom("Lemonada-Bold", size: 14))
-                                        .foregroundColor(Color.yellow)
+                                        .foregroundColor(Color.yellow.opacity(0.6))
                                         .padding(.leading, 10)
 
                                     Text(captionMedium)
@@ -324,7 +309,7 @@ struct ContentView: View {
                                     // Bold Caption Section
                                     Text("Bold")
                                         .font(.custom("Lemonada-Bold", size: 14))
-                                        .foregroundColor(Color.yellow)
+                                        .foregroundColor(Color.yellow.opacity(0.6))
                                         .padding(.leading, 10)
 
                                     Text(captionBold)
@@ -425,11 +410,13 @@ struct ContentView: View {
                 Label("Upload", systemImage: "camera.fill")
             }
 
-            // Gallery View
-            GalleryView(uploadedItems: $uploadedItems)
+            // Replace Gallery View with Profile View
+            ProfileView(isProfilePresented: $isProfilePresented)
                 .tabItem {
-                    Label("Gallery", systemImage: "photo.fill.on.rectangle.fill")
+                    Label("Profile", systemImage: "person.crop.circle.fill")
                 }
+
+
         }
     }
 }

@@ -4,7 +4,7 @@ import Firebase // Import Firebase to configure it
 @main
 struct CaptionApp: App {
     // Toggle this flag to true for testing, false for production
-    @State private var isTestingMode: Bool = true
+    @State private var isTestingMode: Bool = false
 
     init() {
         FirebaseApp.configure() // Initialize Firebase here

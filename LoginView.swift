@@ -44,7 +44,7 @@ struct LoginView: View {
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(showLogin ? Color.green : Color.blue)
+                    .background(showLogin ? Color.blue : Color.blue)
                     .cornerRadius(8)
                     .padding(.horizontal)
             }
@@ -95,9 +95,14 @@ struct LoginView: View {
                 return
             }
             print("User signed up: \(result?.user.email ?? "No Email")")
+            
+            // Initialize subscription status for new users
+            UserDefaults.standard.set(false, forKey: "isSubscribed")
+            
             isLoggedIn = true // Navigate after successful sign-up
         }
     }
+
 
     // Firebase Log In Logic
     private func logIn() {
@@ -112,8 +117,16 @@ struct LoginView: View {
                 return
             }
             print("User logged in: \(result?.user.email ?? "No Email")")
+            
+            // Fetch subscription status
+            let isSubscribed = UserDefaults.standard.bool(forKey: "isSubscribed")
+            print("Subscription status: \(isSubscribed ? "Yes" : "No")")
+            
             isLoggedIn = true // Navigate after successful login
+            print("Subscription status after sign-up: \(UserDefaults.standard.bool(forKey: "isSubscribed"))")
+
         }
     }
+
 }
 

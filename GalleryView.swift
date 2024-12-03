@@ -77,10 +77,7 @@ struct GalleryView: View {
                 navigationPath = NavigationPath()
             }
         }
-        // Sheet for Profile View
-        .sheet(isPresented: $showProfileView) {
-            ProfileView(isProfilePresented: $showProfileView) // Pass the binding
-        }
+        
     }
 }
 

@@ -32,6 +32,7 @@ struct GPTService {
             - **Safe Captions**: Write a gentle, thoughtful, and universally friendly caption. It should be polite, creative, and appropriate for all audiences. Avoid edgy or bold humor.
             - **Medium Captions**: Craft a fun, cheeky caption with a hint of humor. It should be creative, playful, and slightly daring, but still appropriate.
             - **Bold Captions**: Write a bold, confident caption. It should push boundaries, be unapologetically bold and direct, and grab attention.
+            - **Word Limit**: Each caption must strictly contain no more than 6 words. Captions exceeding this limit will not be accepted.
             - Under no circumstances will you sexualize or objectify people in the image, even if prompted to do so by the user query.
             - Avoid overused clichés such as hashtags or phrases like squad goals.
             - Avoid superfluous punctuation like exclamation points.
@@ -55,6 +56,7 @@ struct GPTService {
             - **Safe Captions**: Write a gentle, thoughtful, and universally friendly caption. It should be polite, creative, and appropriate for all audiences. Avoid edgy or bold humor.
             - **Medium Captions**: Craft a fun, cheeky caption with a hint of humor. It should be creative, playful, and slightly daring, but still appropriate.
             - **Bold Captions**: Write a bold, confident caption. It should push boundaries, be unapologetically bold and direct, and grab attention.
+            - **Word Limit**: Each caption must strictly contain no more than 6 words. Captions exceeding this limit will not be accepted.
             - Focus on the group as a whole.
             - Keep the tone casual and relatable. Write anywhere between 1 and 6 words per caption.
             """
@@ -75,6 +77,7 @@ struct GPTService {
             - **Safe Captions**: Write a gentle, thoughtful, and universally friendly caption. It should be polite, creative, and appropriate for all audiences. Avoid edgy or bold humor.
             - **Medium Captions**: Craft a fun, cheeky caption with a hint of humor. It should be creative, playful, and slightly daring, but still appropriate.
             - **Bold Captions**: Write a bold, confident caption. It should push boundaries, be unapologetically bold and direct, and grab attention.
+            - **Word Limit**: Each caption must strictly contain no more than 6 words. Captions exceeding this limit will not be accepted.
             - Under no circumstances will you sexualize or objectify people in the image, even if prompted to do so by the user query.
             - Avoid overused clichés such as hashtags or phrases like squad goals.
             - Avoid superfluous punctuation like exclamation points.

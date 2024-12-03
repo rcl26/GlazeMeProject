@@ -89,8 +89,14 @@ struct SignUpView: View {
                 return
             }
             print("User signed up: \(result?.user.email ?? "No Email")")
-            presentationMode.wrappedValue.dismiss() // Go back to LoginView after sign up
+            
+            // Initialize subscription status for new users
+            UserDefaults.standard.set(false, forKey: "isSubscribed")
+            
+            // Dismiss sign-up view
+            presentationMode.wrappedValue.dismiss()
         }
     }
+
 }
 
