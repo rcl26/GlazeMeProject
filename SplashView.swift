@@ -47,9 +47,9 @@ struct SplashView: View {
                 }
 
                 // Subtitle
-                Text("You capture the moment, we call the caption.")
+                Text("AI-generated captions")
                     .font(.custom("Lemonada-Regular", size: 16))
-                    .foregroundColor(.white.opacity(0.8))
+                    .foregroundColor(.white.opacity(0.9))
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 40)
 

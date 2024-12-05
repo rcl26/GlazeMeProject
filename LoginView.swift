@@ -7,6 +7,8 @@ struct LoginView: View {
     @State private var errorMessage: String = ""
     @State private var showLogin: Bool = false // Toggle to switch to LoginView
     @State private var isLoggedIn: Bool = false // Navigate after successful sign-up or login
+    @State private var hasAgreedToTerms: Bool = false // Tracks Terms of Service agreement
+    @State private var showTermsModal: Bool = false // Controls the Terms of Service modal
 
     var body: some View {
         VStack {
@@ -37,8 +39,37 @@ struct LoginView: View {
                 .foregroundColor(.white)
                 .padding(.horizontal)
 
+            // Terms of Service Checkbox (Sign Up Only)
+            if !showLogin {
+                HStack {
+                    Button(action: {
+                        hasAgreedToTerms.toggle()
+                    }) {
+                        Image(systemName: hasAgreedToTerms ? "checkmark.square.fill" : "square")
+                            .foregroundColor(.white)
+                    }
+                    Text("I agree to the ")
+                        .foregroundColor(.white) // Updated for readability
+                    Button(action: {
+                        showTermsModal.toggle()
+                    }) {
+                        Text("Terms of Service")
+                            .underline()
+                            .foregroundColor(.white)
+                    }
+                }
+                .padding(.horizontal)
+                .padding(.top, 10)
+            }
+
             // Primary Button (Sign Up or Log In)
-            Button(action: showLogin ? logIn : signUp) {
+            Button(action: {
+                if showLogin || hasAgreedToTerms {
+                    showLogin ? logIn() : signUp()
+                } else {
+                    errorMessage = "You must agree to the Terms of Service."
+                }
+            }) {
                 Text(showLogin ? "Log In" : "Sign Up")
                     .font(.custom("Lemonada-Bold", size: 20))
                     .foregroundColor(.white)
@@ -80,6 +111,9 @@ struct LoginView: View {
         .fullScreenCover(isPresented: $isLoggedIn) {
             ContentView() // Navigate to the main app after sign-up or login
         }
+        .sheet(isPresented: $showTermsModal) {
+            TermsOfServiceView()
+        }
     }
 
     // Firebase Sign Up Logic
@@ -103,7 +137,6 @@ struct LoginView: View {
         }
     }
 
-
     // Firebase Log In Logic
     private func logIn() {
         guard !email.isEmpty, !password.isEmpty else {
@@ -123,10 +156,7 @@ struct LoginView: View {
             print("Subscription status: \(isSubscribed ? "Yes" : "No")")
             
             isLoggedIn = true // Navigate after successful login
-            print("Subscription status after sign-up: \(UserDefaults.standard.bool(forKey: "isSubscribed"))")
-
         }
     }
-
 }
 

@@ -9,50 +9,56 @@ struct ProfileView: View {
     var body: some View {
         NavigationView {
             VStack(spacing: 30) {
-                // Profile Title
-                Text("Profile")
-                    .font(.custom("Lemonada-Medium", size: 28))
-                    .foregroundColor(.blue)
+                // Default Profile Icon
+                Image(systemName: "person.circle.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 100, height: 100)
+                    .foregroundColor(.gray)
                     .padding(.top, 30)
 
                 // User Details
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Email: \(userEmail)")
-                        .font(.custom("Lemonada-Regular", size: 14))
-                        .foregroundColor(.black)
+                    Text("Account Email: \(userEmail)")
+                        .font(.custom("Lemonada-Bold", size: 18))
+                        .foregroundColor(.white)
                     Text("Subscribed? \(isSubscribed)")
-                        .font(.custom("Lemonada-Regular", size: 14))
+                        .font(.custom("Lemonada-Bold", size: 18))
                         .foregroundColor(.gray)
                 }
                 .frame(width: 300, alignment: .leading)
-                .padding()
+                .padding(.top, 20) // Add spacing below the profile icon
 
+                // Add extra space between User Details and Tappable Options
+                Spacer()
+                    .frame(height: 30) // Adjust height as needed
+                
                 // Tappable Options
                 VStack(spacing: 15) {
                     NavigationLink(destination: TermsOfServiceView()) {
                         Text("Terms of Service")
-                            .font(.custom("Lemonada-Bold", size: 16))
+                            .font(.custom("Lemonada-Regular", size: 14))
                             .foregroundColor(.gray)
                             .underline()
                     }
 
                     NavigationLink(destination: PrivacyPolicyView()) {
                         Text("Privacy Policy")
-                            .font(.custom("Lemonada-Bold", size: 16))
+                            .font(.custom("Lemonada-Regular", size: 14))
                             .foregroundColor(.gray)
                             .underline()
                     }
 
                     NavigationLink(destination: DisclaimerView()) {
                         Text("Disclaimer")
-                            .font(.custom("Lemonada-Bold", size: 16))
+                            .font(.custom("Lemonada-Regular", size: 14))
                             .foregroundColor(.gray)
                             .underline()
                     }
 
                     Button(action: logOut) {
                         Text("Log Out")
-                            .font(.custom("Lemonada-Bold", size: 16))
+                            .font(.custom("Lemonada-Regular", size: 14))
                             .foregroundColor(.gray)
                             .underline()
                     }
@@ -76,7 +82,7 @@ struct ProfileView: View {
             }
             .navigationBarTitle("Profile", displayMode: .inline)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color.white.ignoresSafeArea())
+            .background(Color.black.ignoresSafeArea())
         }
     }
 

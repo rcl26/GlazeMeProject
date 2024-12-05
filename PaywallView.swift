@@ -16,7 +16,7 @@ struct PaywallView: View {
                 .padding()
 
             // Description
-            Text("$1/month for unlimited access to AI-generated captions.")
+            Text("$1/week for unlimited access to AI-generated captions.")
                 .font(.custom("Lemonada-Regular", size: 18))
                 .foregroundColor(.gray)
                 .multilineTextAlignment(.center)
@@ -51,6 +51,6 @@ struct PaywallView: View {
             Spacer()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.white.ignoresSafeArea())
+        .background(Color.black.ignoresSafeArea())
     }
 }
